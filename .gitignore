@@ -1,0 +1,4 @@
+# Banco de dados e imagens enviadas (dados da loja, não vão para o Git)
+data/
+uploads/*
+!uploads/.gitkeep

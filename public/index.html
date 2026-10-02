@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Catálogo de Produtos</title>
+  <meta name="description" content="Catálogo de produtos: monte seu pedido e envie pelo WhatsApp ou e-mail.">
+  <link rel="icon" href="/img/icone.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/catalogo.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="topo-interno">
+      <button class="btn btn-fantasma btn-icone so-mobile" id="abrir-lateral" aria-label="Abrir categorias" aria-controls="lateral" aria-expanded="false"></button>
+      <a class="marca" href="/" id="marca">
+        <span class="marca-icone" aria-hidden="true"></span>
+        <span class="marca-nome" id="nome-loja">Catálogo</span>
+      </a>
+      <form class="busca" id="form-busca" role="search">
+        <label class="sr-only" for="busca">Buscar produtos</label>
+        <span class="busca-icone" aria-hidden="true"></span>
+        <input class="input" id="busca" type="search" placeholder="Buscar por nome, código de barras ou descrição" autocomplete="off">
+      </form>
+      <button class="btn btn-primario botao-carrinho" id="abrir-carrinho" aria-controls="carrinho">
+        <span class="botao-carrinho-icone" aria-hidden="true"></span>
+        <span class="botao-carrinho-texto">Meu pedido</span>
+        <span class="contador" id="contador-carrinho" aria-label="itens no pedido">0</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="lateral" id="lateral" aria-label="Categorias">
+      <div class="lateral-topo so-mobile">
+        <strong>Categorias</strong>
+        <button class="btn btn-fantasma btn-icone" id="fechar-lateral" aria-label="Fechar categorias"></button>
+      </div>
+      <nav id="lista-categorias"><div class="carregando">Carregando…</div></nav>
+    </aside>
+
+    <main class="conteudo" id="conteudo">
+      <div class="barra">
+        <div>
+          <nav class="trilha" id="trilha" aria-label="Filtro atual"></nav>
+          <p class="resultado" id="resultado" aria-live="polite"></p>
+        </div>
+        <label class="ordenar">
+          <span class="sr-only">Ordenar por</span>
+          <select class="select" id="ordem">
+            <option value="">Relevância</option>
+            <option value="nome">Nome (A–Z)</option>
+            <option value="menor_preco">Menor preço</option>
+            <option value="maior_preco">Maior preço</option>
+            <option value="recentes">Novidades</option>
+          </select>
+        </label>
+      </div>
+      <div class="grade" id="grade"><div class="carregando">Carregando produtos…</div></div>
+    </main>
+  </div>
+
+  <div class="veu" id="veu-lateral"></div>
+
+  <!-- Carrinho / resumo do pedido -->
+  <div class="veu" id="veu-carrinho"></div>
+  <aside class="gaveta" id="carrinho" role="dialog" aria-modal="true" aria-labelledby="titulo-carrinho" inert>
+    <div class="gaveta-topo">
+      <h2 id="titulo-carrinho">Meu pedido</h2>
+      <button class="btn btn-fantasma btn-icone" id="fechar-carrinho" aria-label="Fechar pedido"></button>
+    </div>
+    <div class="gaveta-corpo" id="carrinho-corpo"></div>
+    <div class="gaveta-rodape" id="carrinho-rodape"></div>
+  </aside>
+
+  <!-- Detalhes do produto -->
+  <dialog class="modal modal-produto" id="modal-produto" aria-labelledby="titulo-produto"></dialog>
+
+  <script type="module" src="/js/catalogo.js"></script>
+</body>
+</html>

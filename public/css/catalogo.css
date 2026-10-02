@@ -1,0 +1,196 @@
+/* ==========================================================================
+   Catálogo público
+   ========================================================================== */
+.so-mobile { display: none; }
+
+/* ---------- Topo ---------- */
+.topo {
+  position: sticky; top: 0; z-index: 30;
+  background: color-mix(in srgb, var(--superficie) 92%, transparent);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--borda);
+}
+.topo-interno {
+  max-width: 1440px; margin: 0 auto;
+  display: flex; align-items: center; gap: 1rem;
+  padding: .75rem 1.5rem;
+}
+.marca { display: flex; align-items: center; gap: .6rem; color: var(--texto); text-decoration: none; min-width: 0; }
+.marca-icone { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px; background: var(--primaria); color: var(--primaria-texto); flex: none; }
+.marca-nome { font-weight: 700; font-size: 1.05rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.busca { position: relative; flex: 1; max-width: 560px; margin: 0 auto; }
+.busca .input { padding-left: 2.4rem; background: var(--superficie-2); border-color: transparent; }
+.busca .input:focus { background: var(--superficie); border-color: var(--foco); }
+.busca-icone { position: absolute; left: .75rem; top: 50%; transform: translateY(-50%); color: var(--texto-3); display: flex; }
+
+.botao-carrinho { position: relative; }
+.contador {
+  min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px;
+  display: inline-grid; place-items: center;
+  background: var(--primaria-texto); color: var(--primaria); font-size: .75rem; font-weight: 700;
+}
+.contador.pulsa { animation: pulsa .35s ease; }
+@keyframes pulsa { 50% { transform: scale(1.3); } }
+
+/* ---------- Layout ---------- */
+.layout {
+  max-width: 1440px; margin: 0 auto;
+  display: grid; grid-template-columns: 260px minmax(0, 1fr); gap: 2rem;
+  padding: 1.5rem;
+}
+
+/* ---------- Sidebar de categorias ---------- */
+.lateral { position: sticky; top: 84px; align-self: start; max-height: calc(100dvh - 100px); overflow-y: auto; }
+.lista-cat { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.cat-botao {
+  width: 100%; display: flex; align-items: center; gap: .5rem;
+  padding: .55rem .7rem; border: 0; border-radius: var(--raio-sm);
+  background: none; color: var(--texto-2); text-align: left; cursor: pointer; font-weight: 500;
+}
+.cat-botao:hover { background: var(--superficie-2); color: var(--texto); }
+.cat-botao .nome { flex: 1; min-width: 0; }
+.cat-botao .qtd { font-size: .78rem; color: var(--texto-3); font-variant-numeric: tabular-nums; }
+.cat-botao .seta { display: flex; color: var(--texto-3); transition: transform .2s; }
+.cat-botao[aria-expanded="true"] .seta { transform: rotate(90deg); }
+.cat-botao.ativo { background: var(--superficie-2); color: var(--texto); font-weight: 700; }
+.cat-botao.ativo .qtd { color: var(--texto-2); }
+.lista-sub { list-style: none; margin: 2px 0 6px 1.1rem; padding: 0 0 0 .6rem; border-left: 1px solid var(--borda); display: grid; gap: 1px; }
+.lista-sub .cat-botao { padding: .4rem .6rem; font-size: .9rem; }
+.lista-sub .cat-botao.ativo { background: none; color: var(--texto); box-shadow: inset 2px 0 0 var(--destaque); border-radius: 0 var(--raio-sm) var(--raio-sm) 0; margin-left: -.6rem; padding-left: 1.2rem; }
+.lateral-titulo { margin: 0 0 .5rem .7rem; font-size: .72rem; text-transform: uppercase; letter-spacing: .08em; color: var(--texto-3); font-weight: 700; }
+
+/* ---------- Barra de resultados ---------- */
+.barra { display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem; margin-bottom: 1.25rem; flex-wrap: wrap; }
+.trilha { display: flex; align-items: center; flex-wrap: wrap; gap: .35rem; font-size: 1.35rem; font-weight: 700; }
+.trilha .sep { color: var(--texto-3); font-weight: 400; }
+.trilha button { border: 0; background: none; padding: 0; font: inherit; color: var(--texto-2); cursor: pointer; }
+.trilha button:hover { color: var(--texto); text-decoration: underline; }
+.trilha .limpar { font-size: .82rem; font-weight: 600; margin-left: .5rem; padding: .15rem .55rem; border-radius: 999px; background: var(--superficie-2); color: var(--texto-2); }
+.trilha .limpar:hover { text-decoration: none; color: var(--texto); }
+.resultado { margin: .15rem 0 0; color: var(--texto-2); font-size: .88rem; }
+.ordenar .select { min-width: 170px; }
+
+/* ---------- Grade de produtos ---------- */
+.grade { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 1rem; }
+.grade > .vazio, .grade > .carregando { grid-column: 1 / -1; }
+
+.card {
+  display: flex; flex-direction: column;
+  background: var(--superficie); border: 1px solid var(--borda); border-radius: var(--raio);
+  overflow: hidden; transition: box-shadow .2s, border-color .2s;
+}
+.card:hover { box-shadow: var(--sombra); border-color: var(--borda-forte); }
+.card-imagem {
+  position: relative; aspect-ratio: 1; background: var(--superficie-2);
+  border: 0; padding: 0; cursor: pointer; display: block; width: 100%;
+}
+.card-imagem img, .card-imagem .sem-imagem { width: 100%; height: 100%; object-fit: contain; }
+.card-imagem img { padding: .75rem; background: #fff; }
+.card-imagem .sem-imagem { font-size: 2.2rem; }
+.card-imagem .selo { position: absolute; top: .6rem; left: .6rem; }
+.card.esgotado .card-imagem img, .card.esgotado .card-imagem .sem-imagem { opacity: .45; }
+
+.card-corpo { flex: 1; display: flex; flex-direction: column; gap: .2rem; padding: .85rem .9rem 1rem; }
+.card-categoria { font-size: .72rem; text-transform: uppercase; letter-spacing: .06em; color: var(--texto-3); font-weight: 600; }
+.card-nome { margin: 0; font-size: .97rem; font-weight: 600; line-height: 1.3; }
+.card-nome button { all: unset; cursor: pointer; }
+.card-nome button:hover { text-decoration: underline; }
+.card-nome button:focus-visible { outline: 2px solid var(--foco); outline-offset: 2px; }
+.card-conteudo { font-size: .85rem; color: var(--texto-2); }
+.card-rodape { margin-top: auto; padding-top: .7rem; display: grid; gap: .6rem; }
+.card-preco { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* Seletor de quantidade (card, modal e carrinho) */
+.quantidade { display: inline-flex; align-items: center; border: 1px solid var(--borda-forte); border-radius: var(--raio-sm); overflow: hidden; background: var(--superficie); }
+.quantidade button { width: 36px; height: 36px; border: 0; background: none; display: grid; place-items: center; cursor: pointer; color: var(--texto-2); }
+.quantidade button:hover:not(:disabled) { background: var(--superficie-2); color: var(--texto); }
+.quantidade button:disabled { opacity: .35; cursor: not-allowed; }
+.quantidade input { width: 44px; height: 36px; border: 0; text-align: center; background: none; font-weight: 600; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+.quantidade input::-webkit-inner-spin-button, .quantidade input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.card .quantidade { width: 100%; justify-content: space-between; }
+/* Card estreito: o botão mostra só "Adicionar" */
+.card-rodape { container-type: inline-size; }
+@container (max-width: 210px) { .texto-longo { display: none; } }
+
+/* ---------- Modal do produto ---------- */
+.modal-produto .modal-corpo { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 1.5rem; }
+.produto-imagem { aspect-ratio: 1; border-radius: var(--raio); overflow: hidden; background: #fff; border: 1px solid var(--borda); }
+.produto-imagem img, .produto-imagem .sem-imagem { width: 100%; height: 100%; object-fit: contain; }
+.produto-imagem .sem-imagem { font-size: 3.5rem; }
+.produto-info { display: flex; flex-direction: column; gap: .75rem; }
+.produto-info h2 { margin: 0; font-size: 1.35rem; line-height: 1.25; }
+.produto-info .preco { font-size: 1.6rem; font-weight: 700; }
+.produto-info .descricao { color: var(--texto-2); white-space: pre-line; margin: 0; }
+.ficha { display: grid; grid-template-columns: auto 1fr; gap: .35rem 1rem; margin: 0; font-size: .88rem; }
+.ficha dt { color: var(--texto-3); }
+.ficha dd { margin: 0; }
+.ficha .mono { font-family: var(--mono); }
+.produto-acoes { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: auto; }
+
+/* ---------- Carrinho ---------- */
+.item-carrinho { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: .8rem; padding: .85rem 0; border-bottom: 1px solid var(--borda); }
+.item-carrinho:first-child { padding-top: 0; }
+.item-carrinho:last-child { border-bottom: 0; }
+.item-carrinho .miniatura { width: 64px; height: 64px; border-radius: var(--raio-sm); overflow: hidden; background: #fff; border: 1px solid var(--borda); }
+.item-carrinho .miniatura img, .item-carrinho .miniatura .sem-imagem { width: 100%; height: 100%; object-fit: contain; }
+.item-carrinho .miniatura .sem-imagem { font-size: .9rem; }
+.item-carrinho .nome { font-weight: 600; line-height: 1.3; }
+.item-carrinho .detalhe { font-size: .82rem; color: var(--texto-2); }
+.item-carrinho .controles { display: flex; align-items: center; gap: .5rem; margin-top: .45rem; }
+.item-carrinho .quantidade button { width: 30px; height: 30px; }
+.item-carrinho .quantidade input { width: 36px; height: 30px; }
+.item-carrinho .subtotal { font-weight: 700; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.item-carrinho .aviso-estoque { font-size: .78rem; color: var(--alerta); margin-top: .25rem; }
+
+.totais { display: flex; justify-content: space-between; align-items: baseline; margin: .25rem 0 .9rem; }
+.totais span { color: var(--texto-2); }
+.totais strong { font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+
+.form-cliente { display: grid; gap: .8rem; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--borda); }
+.form-cliente h3 { margin: 0; font-size: 1rem; }
+.form-cliente .linha { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; }
+.nota { font-size: .8rem; color: var(--texto-3); margin: .5rem 0 0; text-align: center; }
+
+.sucesso { text-align: center; padding: 1rem 0; }
+.sucesso-icone { width: 56px; height: 56px; margin: 0 auto .75rem; border-radius: 50%; display: grid; place-items: center; background: var(--sucesso-fundo); color: var(--sucesso); }
+.sucesso-icone svg { width: 28px; height: 28px; }
+.sucesso h3 { margin: 0 0 .25rem; font-size: 1.2rem; }
+.sucesso .codigo { font-family: var(--mono); font-size: 1.1rem; font-weight: 700; padding: .3rem .7rem; border-radius: var(--raio-sm); background: var(--superficie-2); display: inline-block; margin: .5rem 0; }
+.sucesso p { color: var(--texto-2); }
+.sucesso .acoes { display: grid; gap: .5rem; margin-top: 1.25rem; text-align: left; }
+.resumo-texto { text-align: left; white-space: pre-wrap; font-size: .82rem; background: var(--superficie-2); border-radius: var(--raio-sm); padding: .75rem; max-height: 180px; overflow: auto; margin-top: 1rem; color: var(--texto-2); }
+
+/* ---------- Responsivo ---------- */
+@media (max-width: 900px) {
+  .so-mobile { display: flex; }
+  .layout { grid-template-columns: 1fr; padding: 1rem; }
+  .lateral {
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 50;
+    width: min(300px, 85%); max-height: none; align-self: stretch;
+    background: var(--superficie); padding: 0 .75rem 1rem;
+    transform: translateX(-100%); transition: transform .25s ease;
+    box-shadow: var(--sombra-lg);
+  }
+  .lateral.aberta { transform: none; }
+  .lateral-topo { align-items: center; justify-content: space-between; padding: .9rem .25rem .9rem .7rem; position: sticky; top: 0; background: var(--superficie); }
+  .lateral-titulo { display: none; }
+  .modal-produto .modal-corpo { grid-template-columns: 1fr; }
+  .produto-imagem { max-height: 300px; aspect-ratio: auto; height: 300px; }
+}
+
+@media (max-width: 640px) {
+  .topo-interno { flex-wrap: wrap; gap: .5rem .75rem; padding: .6rem 1rem; }
+  .busca { order: 3; flex-basis: 100%; max-width: none; }
+  .marca { flex: 1; }
+  .botao-carrinho-texto { display: none; }
+  .lateral { top: 0; }
+  .grade { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .65rem; }
+  .card-corpo { padding: .7rem; }
+  .card-preco { font-size: 1.05rem; }
+  .card .btn { font-size: .85rem; padding: .45rem .5rem; }
+  .trilha { font-size: 1.15rem; }
+  .barra { align-items: stretch; }
+  .ordenar, .ordenar .select { width: 100%; }
+  .form-cliente .linha { grid-template-columns: 1fr; }
+}

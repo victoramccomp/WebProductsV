@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <title>Painel · Catálogo</title>
+  <link rel="icon" href="/img/icone.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+  <!-- Login / primeiro acesso -->
+  <main class="entrada" id="tela-entrada" hidden>
+    <div class="entrada-cartao">
+      <div class="entrada-marca"><span class="marca-icone" id="icone-entrada"></span><span>Painel da loja</span></div>
+      <div id="entrada-conteudo"></div>
+    </div>
+  </main>
+
+  <!-- Painel -->
+  <div class="painel" id="painel" hidden>
+    <aside class="menu" id="menu">
+      <div class="menu-marca">
+        <span class="marca-icone" id="icone-painel"></span>
+        <div>
+          <strong id="nome-loja-painel">Minha Loja</strong>
+          <small>Painel administrativo</small>
+        </div>
+      </div>
+      <nav class="menu-links" aria-label="Seções do painel">
+        <a href="#/produtos" data-rota="produtos"><span data-icone="caixa"></span>Produtos</a>
+        <a href="#/pedidos" data-rota="pedidos"><span data-icone="pedido"></span>Pedidos <span class="contador-menu" id="badge-pedidos" hidden></span></a>
+        <a href="#/categorias" data-rota="categorias"><span data-icone="tag"></span>Categorias</a>
+        <a href="#/configuracoes" data-rota="configuracoes"><span data-icone="engrenagem"></span>Configurações</a>
+      </nav>
+      <div class="menu-rodape">
+        <a class="btn btn-bloco" href="/" target="_blank" rel="noopener"><span data-icone="loja"></span>Ver catálogo</a>
+        <div class="usuario">
+          <span id="usuario-nome"></span>
+          <button class="btn btn-fantasma btn-icone" id="sair" aria-label="Sair" title="Sair"><span data-icone="sair"></span></button>
+        </div>
+      </div>
+    </aside>
+    <div class="menu-mobile">
+      <button class="btn btn-fantasma btn-icone" id="abrir-menu" aria-label="Abrir menu" aria-expanded="false"><span data-icone="menu"></span></button>
+      <strong id="titulo-mobile">Painel</strong>
+    </div>
+    <div class="veu" id="veu-menu"></div>
+    <main class="area" id="vista" tabindex="-1"></main>
+  </div>
+
+  <dialog class="modal" id="modal"></dialog>
+  <dialog class="modal modal-pequeno" id="modal-confirmar"></dialog>
+
+  <script type="module" src="/js/admin.js"></script>
+</body>
+</html>
