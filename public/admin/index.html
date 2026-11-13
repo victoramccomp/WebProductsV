@@ -10,10 +10,10 @@
   <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
-  <!-- Login / primeiro acesso -->
+  <!-- Login -->
   <main class="entrada" id="tela-entrada" hidden>
     <div class="entrada-cartao">
-      <div class="entrada-marca"><span class="marca-icone" id="icone-entrada"></span><span>Painel da loja</span></div>
+      <div class="entrada-marca"><span class="marca-icone" data-icone="loja"></span><span>Painel da loja</span></div>
       <div id="entrada-conteudo"></div>
     </div>
   </main>
@@ -22,7 +22,7 @@
   <div class="painel" id="painel" hidden>
     <aside class="menu" id="menu">
       <div class="menu-marca">
-        <span class="marca-icone" id="icone-painel"></span>
+        <span id="logo-painel"></span>
         <div>
           <strong id="nome-loja-painel">Minha Loja</strong>
           <small>Painel administrativo</small>
@@ -30,14 +30,14 @@
       </div>
       <nav class="menu-links" aria-label="Seções do painel">
         <a href="#/produtos" data-rota="produtos"><span data-icone="caixa"></span>Produtos</a>
-        <a href="#/pedidos" data-rota="pedidos"><span data-icone="pedido"></span>Pedidos <span class="contador-menu" id="badge-pedidos" hidden></span></a>
-        <a href="#/categorias" data-rota="categorias"><span data-icone="tag"></span>Categorias</a>
-        <a href="#/configuracoes" data-rota="configuracoes"><span data-icone="engrenagem"></span>Configurações</a>
+        <a href="#/organizacao" data-rota="organizacao"><span data-icone="tag"></span>Categorias e temas</a>
+        <a href="#/aparencia" data-rota="aparencia"><span data-icone="pincel"></span>Aparência da loja</a>
+        <a href="#/conta" data-rota="conta"><span data-icone="usuario"></span>Minha conta</a>
       </nav>
       <div class="menu-rodape">
         <a class="btn btn-bloco" href="/" target="_blank" rel="noopener"><span data-icone="loja"></span>Ver catálogo</a>
         <div class="usuario">
-          <span id="usuario-nome"></span>
+          <span id="usuario-email"></span>
           <button class="btn btn-fantasma btn-icone" id="sair" aria-label="Sair" title="Sair"><span data-icone="sair"></span></button>
         </div>
       </div>

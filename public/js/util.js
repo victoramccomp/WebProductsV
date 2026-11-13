@@ -10,27 +10,10 @@ export function esc(valor) {
   ));
 }
 
-/** fetch com JSON e mensagens de erro em português. */
-export async function api(caminho, { metodo = 'GET', corpo } = {}) {
-  const opcoes = { method: metodo, headers: {}, credentials: 'same-origin' };
-  if (corpo !== undefined) {
-    opcoes.headers['Content-Type'] = 'application/json';
-    opcoes.body = JSON.stringify(corpo);
-  }
-  let resposta;
-  try {
-    resposta = await fetch(caminho, opcoes);
-  } catch {
-    throw Object.assign(new Error('Sem conexão com o servidor.'), { status: 0 });
-  }
-  const dados = await resposta.json().catch(() => ({}));
-  if (!resposta.ok) {
-    throw Object.assign(new Error(dados.erro || `Erro ${resposta.status}`), {
-      status: resposta.status, detalhes: dados.detalhes,
-    });
-  }
-  return dados;
-}
+/** Texto sem acentos e em minúsculas, para buscas: "Pokémon" -> "pokemon". */
+export const semAcento = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+export const slugify = (s) => semAcento(s).replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'item';
 
 export function avisar(mensagem, tipo = 'normal') {
   let pilha = document.querySelector('.avisos');
@@ -72,16 +55,9 @@ document.addEventListener('error', (e) => {
   img.replaceWith(quadro);
 }, true);
 
-/** Só dígitos, com DDI 55 se vier sem. Usado nos links wa.me. */
-export function telefoneWhatsApp(telefone) {
-  const d = String(telefone || '').replace(/\D/g, '');
-  if (!d) return '';
-  return d.length <= 11 ? `55${d}` : d;
-}
-
 /** Máscara (11) 98888-7777 enquanto digita. */
 export function mascararTelefone(valor) {
-  const d = valor.replace(/\D/g, '').slice(0, 11);
+  const d = String(valor).replace(/\D/g, '').slice(0, 11);
   if (d.length <= 2) return d.length ? `(${d}` : '';
   if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
   if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
@@ -98,7 +74,7 @@ export const armazenamento = {
   },
 };
 
-/** Atraso para não buscar a cada tecla. */
+/** Atraso para não reagir a cada tecla. */
 export function debounce(fn, ms = 250) {
   let t;
   return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
@@ -106,24 +82,25 @@ export function debounce(fn, ms = 250) {
 
 // Ícones SVG (traço) usados nas duas telas.
 const caminhos = {
-  carrinho: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2.5 3h2.6l2.2 11.2a1.6 1.6 0 0 0 1.6 1.3h8.7a1.6 1.6 0 0 0 1.6-1.2L21 7H6"/>',
   busca: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
   fechar: '<path d="M6 6l12 12M18 6 6 18"/>',
   menu: '<path d="M4 6h16M4 12h16M4 18h16"/>',
   mais: '<path d="M12 5v14M5 12h14"/>',
-  menos: '<path d="M5 12h14"/>',
   lixo: '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/>',
   editar: '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="m13.5 6.5 4 4"/>',
   seta: '<path d="m9 6 6 6-6 6"/>',
-  whatsapp: '<path d="M3.5 20.5l1.3-4.2A8.5 8.5 0 1 1 8 19.4z"/><path d="M9 8.5c0 3.5 2.9 6.5 6.5 6.5l1-1.6-2-1-1 .9a5 5 0 0 1-2.8-2.8l.9-1-1-2z"/>',
-  email: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6 8.5-6"/>',
+  filtro: '<path d="M4 5h16l-6 8v5l-4 2v-7z"/>',
   sair: '<path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 17l5-5-5-5M15 12H3"/>',
   caixa: '<path d="M3 7.5 12 3l9 4.5v9L12 21l-9-4.5z"/><path d="m3 7.5 9 4.5 9-4.5M12 12v9"/>',
-  pedido: '<path d="M7 3h10l2 3v15H5V6z"/><path d="M9 10h6M9 14h6M9 18h3"/>',
   tag: '<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.5"/>',
-  engrenagem: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  pincel: '<path d="M14.5 4.5 19.5 9.5 11 18l-5-5z"/><path d="M6 13c-2 0-3 1.5-3 3.5S2 20 2 20s3.5.5 5-1 1.5-3 .5-4.5"/>',
+  usuario: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   loja: '<path d="M4 9.5 5.5 4h13L20 9.5M4 9.5V20h16V9.5M4 9.5a2.7 2.7 0 0 0 5.3 0 2.7 2.7 0 0 0 5.4 0 2.7 2.7 0 0 0 5.3 0"/><path d="M10 20v-5h4v5"/>',
-  filtro: '<path d="M4 5h16l-6 8v5l-4 2v-7z"/>',
+  imagem: '<rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-9 9"/>',
+  instagram: '<rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r=".6" fill="currentColor"/>',
+  whatsapp: '<path d="M3.5 20.5l1.3-4.2A8.5 8.5 0 1 1 8 19.4z"/><path d="M9 8.5c0 3.5 2.9 6.5 6.5 6.5l1-1.6-2-1-1 .9a5 5 0 0 1-2.8-2.8l.9-1-1-2z"/>',
+  facebook: '<path d="M14 21v-8h3l.5-3.5H14V7.8c0-1 .3-1.8 1.8-1.8h1.8V3a24 24 0 0 0-2.6-.1C12.4 2.9 10.6 4.5 10.6 7.4v2.1H7.7V13h2.9v8"/>',
+  tiktok: '<path d="M14 3v12.2a3.8 3.8 0 1 1-3.8-3.8"/><path d="M14 3c.4 2.6 2.2 4.4 5 4.6"/>',
 };
 export const icone = (nome, classe = 'icone') =>
   `<svg class="${classe}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${caminhos[nome] || ''}</svg>`;

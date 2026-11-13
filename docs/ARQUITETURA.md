@@ -1,125 +1,91 @@
 # Arquitetura do WebProductsV
 
-## 1. Stacks avaliadas
-
-| | **A. Front puro + PocketBase** | **B. Front puro + Node.js nativo** ✅ escolhida | **C. Next.js + Supabase** |
-|---|---|---|---|
-| Front-end | HTML/CSS/JS puros | HTML/CSS/JS puros (ES modules) | React + Tailwind, com build |
-| Back-end | Binário único em Go (SQLite, autenticação, arquivos, API REST, painel próprio) | `server.js` com `node:http`, `node:sqlite` e `node:crypto` — **zero dependências** | Supabase (Postgres, Auth, Storage, RLS) na nuvem |
-| Para rodar | Baixar `pocketbase.exe` | `node server.js` | `npm install` + conta Supabase + chaves |
-| Prós | Login, upload e permissões prontos e testados | Nada para instalar; todo o código é legível e didático; backup = copiar uma pasta | Escala, ecossistema, deploy fácil na Vercel |
-| Contras | Depende de binário de terceiros; regras configuradas fora do código | Auth/sessões/upload escritos à mão (mais código próprio para manter) | `npm`/build; dependência de serviço externo; pesado para um catálogo simples |
-| Hospedagem | VPS ou PocketHost | Qualquer VPS, Render, Railway, Fly.io | Vercel + Supabase |
-
-**Por que B:** mantém o padrão dos projetos VPlays (sem npm, sem build, abre com dois cliques),
-roda offline e tem tudo o que o catálogo precisa. Se um dia precisar escalar (muitos acessos
-simultâneos, várias lojas), dá para trocar o SQLite por Postgres mantendo a mesma API.
-
-## 2. Esquema do banco (SQLite)
+## Visão geral
 
 ```
-usuarios 1───N sessoes
+Navegador (HTML/CSS/JS puros, ES modules)
+   │  fetch
+   ├── /rest/v1/…     Supabase PostgREST  → tabelas (RLS decide quem lê/grava)
+   ├── /auth/v1/…     Supabase Auth       → login do admin (e-mail + senha)
+   └── /storage/v1/…  Supabase Storage    → bucket público "imagens" (produtos e logo)
 
-categorias 1───N subcategorias
-     │                │
-     1                1 (opcional)
-     │                │
-     N                N
-     └──── produtos ──┘
-               │ 1
-               │
-               N (produto_id vira NULL se o produto for excluído)
-pedidos 1───N itens_pedido
+Vercel: só serve os arquivos de public/ (sem servidor próprio).
+```
 
-configuracoes (chave → valor)
+- **Sem servidor próprio:** toda regra de permissão fica no banco (Row Level Security).
+- **Sem biblioteca:** `public/js/supabase.js` faz Auth, REST e Storage com `fetch`
+  (mesmo padrão do SmallPDVMobile).
+- **Versão anterior** (Node + SQLite + carrinho de pedidos) está no histórico do Git, no commit `42db0e0`.
+
+## Banco de dados
+
+```
+categorias 1──N produtos N──1 temas (opcional)
+loja (1 linha: identidade visual e contatos)
+admins (user_id → auth.users)
 ```
 
 | Tabela | Colunas principais | Observações |
 |---|---|---|
-| `usuarios` | `id`, `nome`, `email` (único, sem diferenciar maiúsculas), `senha_hash`, `criado_em` | Senha com **scrypt** + sal aleatório (`scrypt$sal$hash`). |
-| `sessoes` | `token_hash` (PK), `usuario_id`, `expira_em` | Guarda só o **SHA-256 do token**; o token vai no cookie `HttpOnly; SameSite=Strict`. Validade de 7 dias. |
-| `categorias` | `id`, `nome` (único), `slug` (único), `ordem` | O `slug` vai na URL do catálogo (`?categoria=bebidas`). |
-| `subcategorias` | `id`, `categoria_id` → categorias (CASCADE), `nome`, `slug`, `ordem` | Nome e slug únicos **dentro** da categoria. |
-| `produtos` | `id`, `nome`, `descricao`, `conteudo`, `codigo_barras` (único, opcional), `preco_centavos`, `estoque`, `categoria_id` (RESTRICT), `subcategoria_id` (SET NULL), `imagem`, `ativo`, `criado_em`, `atualizado_em` | Preço em **centavos (inteiro)** para não ter erro de arredondamento. `imagem` = `/uploads/arquivo.webp` ou URL externa. `ativo = 0` esconde do catálogo. |
-| `pedidos` | `id`, `codigo` (único, ex.: `261002-A307B2`), `cliente_nome`, `cliente_telefone`, `cliente_email`, `observacoes`, `total_centavos`, `status`, `criado_em`, `atualizado_em` | `status` ∈ `pendente`, `em_analise`, `aprovado`, `cancelado` (CHECK). |
-| `itens_pedido` | `id`, `pedido_id` (CASCADE), `produto_id` (SET NULL), `nome_produto`, `conteudo`, `codigo_barras`, `preco_unit_centavos`, `quantidade`, `subtotal_centavos` | **Cópia dos dados do produto** no momento do pedido: editar ou excluir o produto não altera pedidos antigos. |
-| `configuracoes` | `chave`, `valor` | `loja_nome`, `loja_whatsapp`, `loja_email`, `loja_mensagem`. |
+| `categorias` | `id`, `nome` (único), `ordem` | Tipo do produto (Blister, Box, ETB…). `ordem` = ordem na barra lateral. |
+| `temas` | `id`, `nome` (único), `cor` (`#rrggbb`), `ordem` | Assunto do produto (Pokémon, Digimon…). A cor aparece no catálogo. |
+| `produtos` | `id`, `nome`, `descricao`, `conteudo`, `codigo_barras` (único, 8–14 dígitos), `preco_centavos`, `estoque`, `categoria_id` (obrigatório), `tema_id` (opcional), `imagem` (URL), `ativo`, `criado_em`, `atualizado_em` | Preço em **centavos** (inteiro). `ativo = false` esconde do catálogo. |
+| `loja` | `nome`, `slogan`, `logo_url`, `cor_primaria`, `instagram`, `whatsapp` (só dígitos, com DDI), `facebook`, `tiktok` | Uma única linha (`id = 1`). |
+| `admins` | `user_id` | Quem pode gravar. Conta no Auth sem linha aqui não grava nada. |
 
-O SQL completo está em [`src/db.js`](../src/db.js).
+Excluir categoria com produtos é bloqueado (`on delete restrict`). Excluir tema deixa os produtos sem tema.
+O SQL completo e idempotente está em [`supabase/schema.sql`](../supabase/schema.sql).
 
-### Regras de negócio
+## Permissões (RLS)
 
-- O **preço do pedido é sempre recalculado no servidor** a partir do banco; o navegador só envia `produto_id` e `quantidade`.
-- O pedido é recusado (HTTP 409) se pedir mais do que o estoque; o carrinho se ajusta sozinho.
-- **Aprovar** um pedido dá baixa no estoque (em transação; falha se faltar produto).
-  Tirar um pedido de "Aprovado" (ex.: cancelar) **devolve** as quantidades.
-- Categoria com produtos não pode ser excluída. Excluir subcategoria mantém os produtos na categoria.
+| Quem | Pode |
+|---|---|
+| Visitante (anon) | Ler categorias, temas, loja e produtos **ativos** |
+| Usuário logado que **não** está em `admins` | O mesmo que o visitante |
+| Admin (`public.eh_admin()`) | Ler tudo (inclusive ocultos), criar/alterar/excluir categorias, temas e produtos, alterar a loja, enviar/apagar imagens |
 
-## 3. Estrutura de pastas
+Testado localmente: visitante e conta comum não conseguem inserir, alterar, apagar, se tornar admin
+nem enviar arquivos; o admin consegue.
+
+## Estrutura de pastas
 
 ```
 WebProductsV/
-├── server.js                 Servidor HTTP: API + arquivos estáticos + uploads
-├── iniciar-servidor.bat      Atalho de dois cliques (Windows)
-├── src/
-│   ├── db.js                 Conexão SQLite, criação das tabelas, helpers (transação, slug)
-│   ├── http.js               Roteador mínimo, leitura de JSON, cookies, ErroHttp
-│   ├── auth.js               scrypt, sessões, exigirLogin, limite de tentativas
-│   ├── imagens.js            Salva upload base64 (confere assinatura JPG/PNG/WebP)
-│   ├── rotas-publicas.js     /api/loja, /api/categorias, /api/produtos, POST /api/pedidos
-│   └── rotas-admin.js        /api/auth/*, /api/admin/* (produtos, categorias, pedidos, configurações)
-├── public/                   Tudo que o navegador recebe
-│   ├── index.html            Catálogo
-│   ├── admin/index.html      Painel administrativo
-│   ├── css/
-│   │   ├── base.css          Tokens de cor (tema claro/escuro), botões, formulários, modal, gaveta
-│   │   ├── catalogo.css
-│   │   └── admin.css
+├── public/                    ← o que a Vercel publica
+│   ├── index.html             Catálogo (layout "vitrine com barra lateral")
+│   ├── admin/index.html       Painel
+│   ├── css/  base.css · catalogo.css · admin.css
 │   ├── js/
-│   │   ├── util.js           api(), formatarReais(), esc(), ícones SVG, máscara de telefone
-│   │   ├── catalogo.js       Sidebar de categorias, busca, grade, modal do produto
-│   │   ├── carrinho.js       Estado do carrinho + gaveta de fechamento do pedido
-│   │   ├── admin.js          Login, rotas do painel, Pedidos, Categorias, Configurações
-│   │   ├── admin-produtos.js Tabela + formulário CRUD de produtos (upload/URL de imagem)
-│   │   └── admin-ui.js       Modal, confirmação, conversão R$ ↔ centavos, validação GTIN
+│   │   ├── config.js          URL + chave pública do Supabase
+│   │   ├── supabase.js        Auth, REST e Storage via fetch
+│   │   ├── loja.js            Cor da marca (contraste automático), logo, redes sociais
+│   │   ├── util.js            Formatação, ícones, avisos, busca sem acento
+│   │   ├── catalogo.js        Filtros (categoria + vários temas), busca, ordenação, detalhes, WhatsApp
+│   │   ├── admin.js           Login, rotas do painel, Minha conta
+│   │   ├── admin-produtos.js  Tabela + formulário CRUD (upload/URL de imagem)
+│   │   ├── admin-organizacao.js  Categorias e temas (ordem, cor, renomear, excluir)
+│   │   ├── admin-aparencia.js Nome, slogan, logo, cor, redes — com prévia ao vivo
+│   │   └── admin-ui.js        Modal, confirmação, R$ ↔ centavos, GTIN, redimensionar imagem
 │   └── img/icone.svg
-├── scripts/dados-exemplo.js  Popula o banco com 19 produtos fictícios
-├── data/                     loja.db (criado automaticamente — fora do Git)
-├── uploads/                  Imagens enviadas pelo painel (fora do Git)
-└── docs/ARQUITETURA.md       Este arquivo
+├── supabase/
+│   ├── schema.sql             Tabelas, RLS, bucket e políticas (rode no SQL Editor)
+│   ├── dados-iniciais.sql     Dados migrados da versão anterior
+│   └── config.toml            Só para o Supabase local (npx supabase start)
+├── docs/
+│   ├── ARQUITETURA.md
+│   └── layouts/               Mockups A, B e C (o escolhido foi o A)
+├── vercel.json                Pasta publicada, URLs limpas, cabeçalhos de segurança
+└── iniciar-servidor.bat       Servidor local de dois cliques
 ```
 
-## 4. API
+## Comportamento do catálogo
 
-| Método | Rota | Acesso | Descrição |
-|---|---|---|---|
-| GET | `/api/loja` | público | Nome, WhatsApp, e-mail e mensagem da loja |
-| GET | `/api/categorias` | público | Categorias + subcategorias + contagem de produtos ativos |
-| GET | `/api/produtos?categoria=&subcategoria=&q=&ordem=` | público | Produtos ativos. `q` busca em nome, descrição, conteúdo e código, sem diferenciar acentos. `ordem`: `nome`, `menor_preco`, `maior_preco`, `recentes` |
-| GET | `/api/produtos/:id` | público | Um produto |
-| POST | `/api/pedidos` | público | `{ cliente: {nome, telefone, email, observacoes}, itens: [{produto_id, quantidade}] }` → código + texto pronto para WhatsApp/e-mail |
-| GET | `/api/auth/estado` | público | `{ configurado, usuario }` |
-| POST | `/api/auth/primeiro-acesso` | só sem usuários | Cria o administrador |
-| POST | `/api/auth/login` · `/api/auth/logout` | público | Sessão por cookie |
-| GET/POST | `/api/admin/produtos` | admin | Listar / criar |
-| GET/PUT/DELETE | `/api/admin/produtos/:id` | admin | Ler / editar / excluir |
-| GET/POST | `/api/admin/categorias` | admin | Listar / criar |
-| PUT/DELETE | `/api/admin/categorias/:id` | admin | Renomear / excluir |
-| POST | `/api/admin/categorias/:id/subcategorias` | admin | Criar subcategoria |
-| PUT/DELETE | `/api/admin/subcategorias/:id` | admin | Renomear / excluir |
-| GET | `/api/admin/pedidos?status=` | admin | Lista + contagem por status |
-| GET/PATCH | `/api/admin/pedidos/:id` | admin | Detalhes / mudar `status` |
-| GET | `/api/admin/resumo` | admin | Indicadores do painel |
-| GET/PUT | `/api/admin/configuracoes` | admin | Dados da loja |
-| PUT | `/api/admin/senha` | admin | Trocar senha |
-
-## 5. Segurança
-
-- Senhas com scrypt; comparação em tempo constante; 5 erros de login = 15 min de bloqueio por IP.
-- Cookie de sessão `HttpOnly` + `SameSite=Strict` (+ `Secure` atrás de HTTPS). Mutations exigem
-  `Content-Type: application/json`, o que bloqueia CSRF por formulário de outro site.
-- Todo texto vindo do banco é escapado antes de ir para o HTML (`esc()`).
-- Uploads: limite de 3 MB, tipo conferido pelos bytes do arquivo (não pela extensão), nome aleatório.
-- Arquivos estáticos protegidos contra `../` (path traversal).
-- Limite de 10 pedidos a cada 10 minutos por IP.
-- Em produção, rode atrás de HTTPS (Caddy ou Nginx) — veja o README.
+- Tudo carrega de uma vez (4 consultas) e os filtros rodam no navegador: busca instantânea, sem acentos.
+- **Categoria:** escolha única. **Temas:** vários ao mesmo tempo (somam). As contagens da lateral
+  consideram os outros filtros ativos.
+- Filtros ficam na URL (`?categoria=etb&temas=pokemon,digimon&q=…`) e cada produto tem link
+  próprio (`?produto=ID`), bons para compartilhar no Instagram/WhatsApp.
+- Com WhatsApp configurado, cada produto tem **Pedir pelo WhatsApp** (ou **Avise-me quando chegar**
+  se estiver esgotado), com o nome, o preço e o link do produto na mensagem.
+- Imagens são reduzidas no navegador (máx. 1200 px, WebP) antes de ir para o Storage; ao trocar ou
+  excluir, a imagem antiga é apagada do bucket.

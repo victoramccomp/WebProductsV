@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layout B · Capa + filtros em faixas</title>
+<style>
+  :root { --marca: #e8590c; --marca-2: #c2410c; --fundo: #fffaf5; --sup: #fff; --borda: #f1e4d8; --texto: #1c1917; --t2: #57534e; --t3: #a8a29e; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 "Segoe UI", system-ui, sans-serif; color: var(--texto); background: var(--fundo); }
+  svg { display: block; }
+  .capa { background: linear-gradient(120deg, var(--marca), var(--marca-2)); color: #fff; position: relative; overflow: hidden; }
+  .capa::after { content: ""; position: absolute; right: -80px; top: -120px; width: 420px; height: 420px; border-radius: 50%; background: rgba(255,255,255,.08); }
+  .capa-in { max-width: 1280px; margin: 0 auto; padding: 30px 32px 74px; display: flex; align-items: center; gap: 22px; position: relative; z-index: 1; }
+  .capa .logo { width: 84px; height: 84px; border-radius: 22px; background: #fff; padding: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.15); }
+  .capa h1 { margin: 0; font-size: 34px; letter-spacing: -.02em; }
+  .capa p { margin: 2px 0 0; opacity: .9; font-size: 16px; }
+  .capa .redes { margin-left: auto; display: flex; gap: 10px; }
+  .capa .redes a { display: inline-flex; align-items: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 999px; background: #fff; color: var(--marca-2); font-weight: 700; text-decoration: none; font-size: 14.5px; }
+  .capa .redes a.ghost { background: rgba(255,255,255,.16); color: #fff; }
+  .capa .redes svg { width: 19px; }
+  .filtros { max-width: 1240px; margin: -46px auto 0; position: relative; z-index: 2; background: var(--sup); border-radius: 18px; box-shadow: 0 12px 34px rgba(120, 53, 15, .12); padding: 6px 22px 16px; }
+  .abas { display: flex; gap: 6px; border-bottom: 1px solid var(--borda); align-items: center; }
+  .aba { padding: 14px 14px 12px; font-weight: 600; color: var(--t2); border-bottom: 3px solid transparent; white-space: nowrap; }
+  .aba.ativo { color: var(--marca); border-color: var(--marca); }
+  .aba small { color: var(--t3); font-weight: 500; margin-left: 4px; }
+  .busca { margin-left: auto; position: relative; width: 280px; }
+  .busca input { width: 100%; height: 38px; border-radius: 999px; border: 1px solid var(--borda); background: var(--fundo); padding: 0 14px 0 38px; font: inherit; font-size: 14px; }
+  .busca svg { position: absolute; left: 13px; top: 10px; width: 17px; color: var(--t3); }
+  .temas { display: flex; align-items: center; gap: 8px; padding-top: 14px; }
+  .temas > span { font-size: 13px; font-weight: 700; color: var(--t2); margin-right: 4px; }
+  .pilula { display: inline-flex; align-items: center; gap: 7px; padding: 7px 14px; border-radius: 999px; border: 1.5px solid var(--borda); font-size: 13.5px; font-weight: 600; color: var(--t2); white-space: nowrap; }
+  .pilula i { width: 10px; height: 10px; border-radius: 50%; background: var(--c); }
+  .pilula.on { background: var(--c); border-color: var(--c); color: #fff; }
+  .pilula.on i { background: #fff; }
+  .pilula.todos.on { background: var(--texto); border-color: var(--texto); }
+  .principal { max-width: 1240px; margin: 0 auto; padding: 22px 0 40px; }
+  .resumo { display: flex; justify-content: space-between; color: var(--t2); font-size: 14px; margin: 0 4px 14px; }
+  .resumo b { color: var(--texto); }
+  .grade { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+  .card { background: var(--sup); border-radius: 16px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,.05); border: 1px solid var(--borda); }
+  .card .img { aspect-ratio: 1; position: relative; }
+  .card .img svg { width: 100%; height: 100%; }
+  .card .faixa { position: absolute; inset: auto 0 0 0; background: rgba(28,25,23,.78); color: #fff; text-align: center; font-weight: 700; font-size: 13px; padding: 6px; letter-spacing: .05em; text-transform: uppercase; }
+  .card .corpo { padding: 11px 13px 14px; }
+  .meta { display: flex; gap: 6px; align-items: center; font-size: 11.5px; color: var(--t3); font-weight: 600; }
+  .meta i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+  .meta b { color: var(--c); }
+  .card h4 { margin: 3px 0 0; font-size: 14.5px; line-height: 1.3; }
+  .conteudo { font-size: 12.5px; color: var(--t2); }
+  .preco { margin-top: 8px; font-size: 19px; font-weight: 800; color: var(--marca-2); }
+  .card.esgotado .img svg { filter: grayscale(1); opacity: .55; }
+  .card.esgotado .preco { color: var(--t3); }
+  @media (max-width: 700px) {
+    .capa-in { padding: 20px 16px 58px; gap: 14px; flex-wrap: wrap; }
+    .capa .logo { width: 56px; height: 56px; border-radius: 16px; padding: 7px; }
+    .capa h1 { font-size: 23px; } .capa p { font-size: 13.5px; }
+    .capa .redes { margin: 0; width: 100%; } .capa .redes a { height: 38px; font-size: 13.5px; padding: 0 14px; } .capa .redes a.ghost span { display: none; }
+    .filtros { margin: -38px 12px 0; padding: 4px 0 12px; border-radius: 16px; }
+    .abas { overflow: hidden; padding: 0 8px; }
+    .busca { display: none; }
+    .temas { overflow: hidden; padding: 12px 12px 0; } .temas > span { display: none; }
+    .principal { padding: 16px 12px 30px; }
+    .grade { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .card h4 { font-size: 13.5px; } .preco { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+<section class="capa"><div class="capa-in" id="capa"></div></section>
+<div class="filtros" id="filtros"></div>
+<main class="principal">
+  <div class="resumo" id="resumo"></div>
+  <div class="grade" id="grade"></div>
+</main>
+<script src="mock.js"></script>
+<script>
+  const { loja, categorias, temas, produtos, corTema, reais, arte, logo, icones } = MOCK;
+  document.getElementById('capa').innerHTML = `
+    <span class="logo">${logo('var(--marca)')}</span>
+    <div><h1>${loja.nome}</h1><p>${loja.slogan}</p></div>
+    <div class="redes"><a href="#">${icones.instagram}<span>Siga ${loja.instagram}</span></a><a class="ghost" href="#">${icones.whatsapp}<span>Fale conosco</span></a></div>`;
+  document.getElementById('filtros').innerHTML = `
+    <div class="abas"><span class="aba ativo">Todos<small>70</small></span>${categorias.map((c) => `<span class="aba">${c.nome}<small>${c.qtd}</small></span>`).join('')}
+      <label class="busca">${icones.busca}<input placeholder="Buscar…"></label></div>
+    <div class="temas"><span>Tema:</span><span class="pilula todos on">Todos</span>${temas.map((t) => `<span class="pilula" style="--c:${t.cor}"><i></i>${t.nome}</span>`).join('')}</div>`;
+  document.getElementById('resumo').innerHTML = `<span><b>70 produtos</b> em todas as categorias</span><span>Ordenar: <b>Mais vendidos ▾</b></span>`;
+  document.getElementById('grade').innerHTML = [...produtos, ...produtos.slice(0, 3)].map((p, i) => `
+    <article class="card ${p.estoque ? '' : 'esgotado'}" style="--c:${corTema(p.tema)}">
+      <div class="img">${arte({ ...p, id: p.id + i * 100 })}${p.estoque ? '' : '<div class="faixa">Esgotado</div>'}</div>
+      <div class="corpo"><div class="meta"><i></i><b>${p.tema}</b>· ${p.categoria}</div><h4>${p.nome}</h4><div class="conteudo">${p.conteudo}</div>
+        <div class="preco">${reais(p.preco)}</div></div>
+    </article>`).join('');
+</script>
+</body>
+</html>

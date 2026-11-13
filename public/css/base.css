@@ -24,6 +24,14 @@
   --info:    #1d4ed8;  --info-fundo:    #dbeafe;
   --whatsapp: #15803d;
 
+  /* Cor da marca da loja: definida no painel (Aparência) e aplicada por js/loja.js */
+  --marca: #4f46e5;
+  --marca-contraste: #ffffff;
+  --marca-tinta-claro: #4f46e5;
+  --marca-tinta-escuro: #a5b4fc;
+  --marca-tinta: var(--marca-tinta-claro);
+  --marca-suave: color-mix(in srgb, var(--marca) 11%, var(--superficie));
+
   --raio: 10px;
   --raio-sm: 6px;
   --sombra: 0 1px 2px rgb(15 23 42 / .06), 0 1px 3px rgb(15 23 42 / .08);
@@ -53,6 +61,8 @@
     --perigo:  #f87171;  --perigo-fundo:  #7f1d1d55;
     --info:    #93c5fd;  --info-fundo:    #1e3a8a55;
     --whatsapp: #22c55e;
+    --marca-tinta: var(--marca-tinta-escuro);
+    --marca-suave: color-mix(in srgb, var(--marca) 20%, var(--superficie));
     --sombra: 0 1px 2px rgb(0 0 0 / .4);
     --sombra-lg: 0 10px 30px rgb(0 0 0 / .5);
     color-scheme: dark;
@@ -94,6 +104,8 @@ a { color: var(--destaque); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn-primario { background: var(--primaria); border-color: var(--primaria); color: var(--primaria-texto); }
 .btn-primario:hover { background: var(--primaria-hover); }
+.btn-marca { background: var(--marca); border-color: var(--marca); color: var(--marca-contraste); }
+.btn-marca:hover { background: var(--marca); filter: brightness(1.08); }
 .btn-perigo { color: var(--perigo); }
 .btn-perigo:hover { background: var(--perigo-fundo); }
 .btn-whatsapp { background: var(--whatsapp); border-color: var(--whatsapp); color: #fff; }
@@ -183,6 +195,14 @@ dialog.modal::backdrop { background: rgb(15 23 42 / .5); }
   display: grid; place-items: center; width: 100%; height: 100%;
   background: var(--superficie-2); color: var(--texto-3);
   font-weight: 700; letter-spacing: .02em;
+}
+
+/* ---------- Logo da loja ---------- */
+.logo { width: 42px; height: 42px; border-radius: 11px; object-fit: contain; flex: none; }
+.logo-monograma {
+  display: grid; place-items: center;
+  background: var(--marca); color: var(--marca-contraste);
+  font-weight: 800; font-size: .95rem; letter-spacing: .02em;
 }
 
 .vazio { padding: 3rem 1rem; text-align: center; color: var(--texto-2); }

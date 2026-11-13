@@ -85,16 +85,33 @@ export function gtinValido(codigo) {
   return (10 - (soma % 10)) % 10 === verificador;
 }
 
-export function formatarData(textoSql) {
-  // O SQLite grava em UTC ("2026-10-02 19:39:53").
-  const data = new Date(`${textoSql.replace(' ', 'T')}Z`);
-  return data.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+/**
+ * Reduz a imagem no navegador antes de enviar (lado maior = tamanhoMax) e devolve um Blob WebP
+ * (ou JPEG, se o navegador não gerar WebP). Fundo branco para PNG transparente, exceto em logos.
+ */
+export function redimensionarImagem(arquivo, { tamanhoMax = 1200, fundoBranco = true } = {}) {
+  return new Promise((resolve, reject) => {
+    if (!/^image\/(jpeg|png|webp|gif|bmp|avif)$/.test(arquivo.type)) {
+      return reject(new Error('Escolha um arquivo de imagem (JPG, PNG ou WebP).'));
+    }
+    const url = URL.createObjectURL(arquivo);
+    const img = new Image();
+    img.onload = () => {
+      const escala = Math.min(1, tamanhoMax / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.width * escala));
+      canvas.height = Math.max(1, Math.round(img.height * escala));
+      const ctx = canvas.getContext('2d');
+      if (fundoBranco) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      canvas.toBlob((webp) => {
+        if (webp && webp.type === 'image/webp') return resolve(webp);
+        canvas.toBlob((outro) => (outro ? resolve(outro) : reject(new Error('Não foi possível processar a imagem.'))),
+          fundoBranco ? 'image/jpeg' : 'image/png', 0.88);
+      }, 'image/webp', 0.85);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não foi possível ler a imagem.')); };
+    img.src = url;
+  });
 }
-
-export const STATUS = {
-  pendente: { nome: 'Pendente', selo: 'selo-alerta' },
-  em_analise: { nome: 'Em análise', selo: 'selo-info' },
-  aprovado: { nome: 'Aprovado', selo: 'selo-sucesso' },
-  cancelado: { nome: 'Cancelado', selo: 'selo-perigo' },
-};
-export const seloStatus = (s) => `<span class="selo ${STATUS[s]?.selo || ''}">${esc(STATUS[s]?.nome || s)}</span>`;

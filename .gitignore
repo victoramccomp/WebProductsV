@@ -1,4 +1,3 @@
-# Banco de dados e imagens enviadas (dados da loja, não vão para o Git)
+# Dados da versão antiga (Node + SQLite): ficam só neste computador
 data/
-uploads/*
-!uploads/.gitkeep
+uploads/

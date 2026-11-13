@@ -1,24 +1,27 @@
-// Painel › Produtos: tabela com busca/ordenação e formulário de cadastro/edição (CRUD).
-import { api, avisar, esc, formatarReais, icone, imagemProduto, debounce } from './util.js';
+// Painel › Produtos: tabela com busca/ordenação/filtros e formulário de cadastro/edição (CRUD).
+import { rest, storage } from './supabase.js';
+import { avisar, debounce, esc, formatarReais, icone, imagemProduto, semAcento } from './util.js';
 import {
-  abrirModal, fecharModal, confirmar, reaisParaCentavos, centavosParaTexto, gtinValido,
+  abrirModal, centavosParaTexto, confirmar, fecharModal, gtinValido, reaisParaCentavos, redimensionarImagem,
 } from './admin-ui.js';
 
 let produtos = [];
 let categorias = [];
-const filtro = { busca: '', categoria: '', ordem: 'nome', direcao: 1 };
+let temas = [];
+const filtro = { busca: '', categoria: '', tema: '', ordem: 'nome', direcao: 1 };
 
 const COLUNAS = [
   { chave: 'nome', titulo: 'Produto' },
   { chave: 'codigo_barras', titulo: 'Código' },
-  { chave: 'categoria', titulo: 'Categoria' },
+  { chave: 'categoria', titulo: 'Categoria / tema' },
   { chave: 'preco_centavos', titulo: 'Preço', num: true },
   { chave: 'estoque', titulo: 'Estoque', num: true },
 ];
 
-const semAcento = (s) => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+// Cores sugeridas para temas novos (o lojista pode trocar em "Categorias e temas").
+export const CORES_TEMA = ['#e3350d', '#7c3aed', '#2563eb', '#16a34a', '#d97706', '#db2777', '#0891b2', '#475569'];
 
-export async function vistaProdutos(vista, { atualizarResumo }) {
+export async function vistaProdutos(vista) {
   vista.innerHTML = `
     <div class="cabecalho">
       <div><h1>Produtos</h1><p>Cadastre, edite e controle o estoque do catálogo.</p></div>
@@ -31,17 +34,17 @@ export async function vistaProdutos(vista, { atualizarResumo }) {
         ${icone('busca')}
         <input class="input" type="search" id="busca-produtos" placeholder="Buscar por nome, código ou descrição" value="${esc(filtro.busca)}">
       </label>
-      <label><span class="sr-only">Filtrar por categoria</span>
-        <select class="select" id="filtro-categoria"><option value="">Todas as categorias</option></select>
-      </label>
+      <label><span class="sr-only">Filtrar por categoria</span><select class="select" id="filtro-categoria"></select></label>
+      <label><span class="sr-only">Filtrar por tema</span><select class="select" id="filtro-tema"></select></label>
     </div>
     <div class="tabela-caixa"><div class="carregando">Carregando…</div></div>`;
 
   vista.querySelector('#novo-produto').addEventListener('click', () => abrirFormulario(null, recarregar));
   vista.querySelector('#busca-produtos').addEventListener('input', debounce((e) => { filtro.busca = e.target.value; renderizarTabela(vista); }, 150));
   vista.querySelector('#filtro-categoria').addEventListener('change', (e) => { filtro.categoria = e.target.value; renderizarTabela(vista); });
+  vista.querySelector('#filtro-tema').addEventListener('change', (e) => { filtro.tema = e.target.value; renderizarTabela(vista); });
 
-  vista.querySelector('.tabela-caixa').addEventListener('click', async (e) => {
+  vista.querySelector('.tabela-caixa').addEventListener('click', (e) => {
     const ordenar = e.target.closest('[data-ordenar]');
     if (ordenar) {
       const chave = ordenar.dataset.ordenar;
@@ -57,42 +60,45 @@ export async function vistaProdutos(vista, { atualizarResumo }) {
   });
 
   async function recarregar() {
-    try {
-      const [lista, cats, resumo] = await Promise.all([
-        api('/api/admin/produtos'), api('/api/admin/categorias'), api('/api/admin/resumo'),
-      ]);
-      produtos = lista;
-      categorias = cats;
-      renderizarIndicadores(vista, resumo);
-      renderizarFiltroCategorias(vista);
-      renderizarTabela(vista);
-      atualizarResumo(resumo);
-    } catch (erro) {
-      if (erro.status === 401) throw erro; // o painel volta para a tela de login
-      vista.querySelector('.tabela-caixa').innerHTML = `<div class="vazio">${esc(erro.message)}</div>`;
-    }
+    const [lista, cats, tms] = await Promise.all([
+      rest('produtos?select=*&order=nome', { admin: true }),
+      rest('categorias?select=id,nome,ordem&order=ordem,nome', { admin: true }),
+      rest('temas?select=id,nome,cor,ordem&order=ordem,nome', { admin: true }),
+    ]);
+    categorias = cats;
+    temas = tms;
+    const nomeCat = new Map(cats.map((c) => [c.id, c.nome]));
+    const tema = new Map(tms.map((t) => [t.id, t]));
+    produtos = lista.map((p) => ({ ...p, categoria: nomeCat.get(p.categoria_id) || '', tema: tema.get(p.tema_id) || null }));
+    renderizarIndicadores(vista);
+    renderizarFiltros(vista);
+    renderizarTabela(vista);
   }
   await recarregar();
 }
 
-function renderizarIndicadores(vista, r) {
+function renderizarIndicadores(vista) {
+  const semEstoque = produtos.filter((p) => p.estoque === 0).length;
+  const ocultos = produtos.filter((p) => !p.ativo).length;
   vista.querySelector('#indicadores').innerHTML = `
-    <div class="indicador"><span>Produtos</span><strong>${r.produtos}</strong></div>
-    <div class="indicador${r.sem_estoque ? ' alerta' : ''}"><span>Sem estoque</span><strong>${r.sem_estoque}</strong></div>
-    <div class="indicador"><span>Categorias</span><strong>${r.categorias}</strong></div>
-    <div class="indicador${r.pedidos_pendentes ? ' alerta' : ''}"><span>Pedidos pendentes</span><strong>${r.pedidos_pendentes}</strong></div>`;
+    <div class="indicador"><span>Produtos</span><strong>${produtos.length}</strong></div>
+    <div class="indicador${semEstoque ? ' alerta' : ''}"><span>Sem estoque</span><strong>${semEstoque}</strong></div>
+    <div class="indicador"><span>Ocultos do catálogo</span><strong>${ocultos}</strong></div>
+    <div class="indicador"><span>Categorias / temas</span><strong>${categorias.length} / ${temas.length}</strong></div>`;
 }
 
-function renderizarFiltroCategorias(vista) {
-  const select = vista.querySelector('#filtro-categoria');
-  select.innerHTML = `<option value="">Todas as categorias</option>${categorias.map((c) =>
-    `<option value="${c.id}" ${String(c.id) === filtro.categoria ? 'selected' : ''}>${esc(c.nome)} (${c.total})</option>`).join('')}`;
+function renderizarFiltros(vista) {
+  vista.querySelector('#filtro-categoria').innerHTML = `<option value="">Todas as categorias</option>${categorias.map((c) =>
+    `<option value="${c.id}" ${String(c.id) === filtro.categoria ? 'selected' : ''}>${esc(c.nome)}</option>`).join('')}`;
+  vista.querySelector('#filtro-tema').innerHTML = `<option value="">Todos os temas</option><option value="sem" ${filtro.tema === 'sem' ? 'selected' : ''}>Sem tema</option>${temas.map((t) =>
+    `<option value="${t.id}" ${String(t.id) === filtro.tema ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}`;
 }
 
 function renderizarTabela(vista) {
   const termos = semAcento(filtro.busca).split(/\s+/).filter(Boolean);
   const lista = produtos
     .filter((p) => !filtro.categoria || String(p.categoria_id) === filtro.categoria)
+    .filter((p) => !filtro.tema || (filtro.tema === 'sem' ? !p.tema_id : String(p.tema_id) === filtro.tema))
     .filter((p) => {
       const alvo = semAcento(`${p.nome} ${p.descricao} ${p.conteudo} ${p.codigo_barras || ''}`);
       return termos.every((t) => alvo.includes(t));
@@ -100,13 +106,15 @@ function renderizarTabela(vista) {
     .sort((a, b) => {
       const va = a[filtro.ordem] ?? '';
       const vb = b[filtro.ordem] ?? '';
-      const r = typeof va === 'number' && typeof vb === 'number' ? va - vb : String(va).localeCompare(String(vb), 'pt-BR', { numeric: true });
+      const r = typeof va === 'number' && typeof vb === 'number'
+        ? va - vb : String(va).localeCompare(String(vb), 'pt-BR', { numeric: true });
       return r * filtro.direcao;
     });
 
   const caixa = vista.querySelector('.tabela-caixa');
   if (!produtos.length) {
-    caixa.innerHTML = `<div class="vazio"><strong>Nenhum produto cadastrado</strong>Clique em “Novo produto” para começar.</div>`;
+    caixa.innerHTML = `<div class="vazio"><strong>Nenhum produto cadastrado</strong>
+      ${categorias.length ? 'Clique em “Novo produto” para começar.' : 'Comece criando uma categoria em “Categorias e temas” — ou crie direto no formulário do produto.'}</div>`;
     return;
   }
   const cabecalho = COLUNAS.map((c) => {
@@ -125,14 +133,14 @@ function renderizarTabela(vista) {
             <td><div class="miniatura">${imagemProduto(p)}</div></td>
             <td><strong>${esc(p.nome)}</strong>${p.ativo ? '' : ' <span class="selo">Oculto</span>'}<span class="sub">${esc(p.conteudo)}</span></td>
             <td class="mono">${esc(p.codigo_barras || '—')}</td>
-            <td>${esc(p.categoria)}<span class="sub">${esc(p.subcategoria || '')}</span></td>
+            <td>${esc(p.categoria)}<span class="sub">${p.tema ? `<span class="ponto-tema" style="--cor:${esc(p.tema.cor)}"></span>${esc(p.tema.nome)}` : 'Sem tema'}</span></td>
             <td class="num">${formatarReais(p.preco_centavos)}</td>
-            <td class="num ${p.estoque === 0 ? 'estoque-zero' : p.estoque <= 5 ? 'estoque-baixo' : ''}">${p.estoque}</td>
+            <td class="num ${p.estoque === 0 ? 'estoque-zero' : p.estoque <= 3 ? 'estoque-baixo' : ''}">${p.estoque}</td>
             <td class="acoes">
               <button class="btn btn-fantasma btn-icone" type="button" aria-label="Editar ${esc(p.nome)}">${icone('editar')}</button>
               <button class="btn btn-fantasma btn-icone btn-perigo" type="button" data-excluir aria-label="Excluir ${esc(p.nome)}">${icone('lixo')}</button>
             </td>
-          </tr>`).join('') || `<tr><td colspan="7"><div class="vazio">Nenhum produto corresponde à busca.</div></td></tr>`}
+          </tr>`).join('') || '<tr><td colspan="7"><div class="vazio">Nenhum produto corresponde à busca.</div></td></tr>'}
       </tbody>
     </table>`;
 }
@@ -140,53 +148,32 @@ function renderizarTabela(vista) {
 async function excluirProduto(produto, depois) {
   const ok = await confirmar({
     titulo: 'Excluir produto',
-    mensagem: `Excluir “${produto.nome}”? Pedidos antigos mantêm o nome e o preço registrados.`,
+    mensagem: `Excluir “${produto.nome}” do catálogo? Isso não pode ser desfeito. Para só esconder, desmarque “Visível no catálogo”.`,
     botao: 'Excluir', perigo: true,
   });
   if (!ok) return;
   try {
-    await api(`/api/admin/produtos/${produto.id}`, { metodo: 'DELETE' });
+    await rest(`produtos?id=eq.${produto.id}`, { metodo: 'DELETE', admin: true });
+    await storage.apagar(produto.imagem);
     avisar('Produto excluído.');
     fecharModal();
-    depois();
+    await depois();
   } catch (erro) { avisar(erro.message, 'erro'); }
 }
 
 // ---------------------------------------------------------------- Formulário
-const SUGESTOES_CONTEUDO = ['Unidade', '500ml', '1 L', '2 L', 'Lata 350ml', '500 g', '1 kg', '5 kg', 'Caixa com 10 unidades', 'Pacote com 4 unidades', 'Fardo com 6 unidades'];
-
-/** Reduz a imagem no navegador (máx. 1200px) antes de enviar. Retorna uma data URL. */
-function redimensionarImagem(arquivo, tamanhoMax = 1200) {
-  return new Promise((resolve, reject) => {
-    if (!/^image\/(jpeg|png|webp|gif|bmp|avif)$/.test(arquivo.type)) {
-      return reject(new Error('Escolha um arquivo de imagem (JPG, PNG ou WebP).'));
-    }
-    const url = URL.createObjectURL(arquivo);
-    const img = new Image();
-    img.onload = () => {
-      const escala = Math.min(1, tamanhoMax / Math.max(img.width, img.height));
-      const canvas = document.createElement('canvas');
-      canvas.width = Math.round(img.width * escala);
-      canvas.height = Math.round(img.height * escala);
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#fff'; // fundo branco para PNG transparente
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(url);
-      let dados = canvas.toDataURL('image/webp', 0.85);
-      if (!dados.startsWith('data:image/webp')) dados = canvas.toDataURL('image/jpeg', 0.88);
-      resolve(dados);
-    };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não foi possível ler a imagem.')); };
-    img.src = url;
-  });
-}
+const SUGESTOES_CONTEUDO = ['Unidade', 'Caixa', 'Pacote com 3', 'Blister', 'Display com 36 boosters', '500 ml', '1 kg', 'Kit com 10 unidades'];
 
 function abrirFormulario(produto, depois) {
   const editando = !!produto;
-  const p = produto || { nome: '', descricao: '', conteudo: '', codigo_barras: '', preco_centavos: 0, estoque: 0, categoria_id: '', subcategoria_id: '', imagem: '', ativo: 1 };
+  const p = produto || {
+    nome: '', descricao: '', conteudo: '', codigo_barras: '', preco_centavos: 0, estoque: 0,
+    categoria_id: categorias.length === 1 ? categorias[0].id : '', tema_id: '', imagem: '', ativo: true,
+  };
+  // imagem: '' | URL já salva | { blob, previa } (arquivo novo, enviado só ao salvar)
   let imagem = p.imagem || '';
-  let modoImagem = imagem && !imagem.startsWith('/uploads/') ? 'url' : 'arquivo';
+  let modoImagem = imagem && !storage.ehImagemNossa(imagem) ? 'url' : 'arquivo';
+  const srcImagem = () => (typeof imagem === 'object' ? imagem.previa : imagem);
 
   const m = abrirModal({
     titulo: editando ? 'Editar produto' : 'Novo produto',
@@ -212,7 +199,7 @@ function abrirFormulario(produto, depois) {
             <textarea class="textarea" name="descricao" maxlength="4000" rows="3">${esc(p.descricao)}</textarea>
           </label>
           <label class="campo"><span>Conteúdo</span>
-            <input class="input" name="conteudo" maxlength="80" list="sugestoes-conteudo" placeholder="Ex.: 500ml, 1kg, Caixa com 10" value="${esc(p.conteudo)}">
+            <input class="input" name="conteudo" maxlength="80" list="sugestoes-conteudo" placeholder="Ex.: Unidade, 500 ml, Caixa com 10" value="${esc(p.conteudo)}">
             <datalist id="sugestoes-conteudo">${SUGESTOES_CONTEUDO.map((s) => `<option value="${s}">`).join('')}</datalist>
           </label>
           <label class="campo"><span>Código de barras (EAN/GTIN)</span>
@@ -239,13 +226,13 @@ function abrirFormulario(produto, depois) {
             </div>
           </div>
           <div class="campo">
-            <label class="rotulo" for="subcategoria">Subcategoria</label>
+            <label class="rotulo" for="tema">Tema</label>
             <div class="selecao-com-botao">
-              <select class="select" id="subcategoria" name="subcategoria_id"></select>
-              <button class="btn btn-icone" type="button" data-nova="subcategoria" aria-label="Nova subcategoria" title="Nova subcategoria">${icone('mais')}</button>
+              <select class="select" id="tema" name="tema_id"></select>
+              <button class="btn btn-icone" type="button" data-nova="tema" aria-label="Novo tema" title="Novo tema">${icone('mais')}</button>
             </div>
-            <div class="nova-opcao" id="nova-subcategoria" hidden>
-              <input class="input" placeholder="Nome da nova subcategoria" maxlength="60">
+            <div class="nova-opcao" id="nova-tema" hidden>
+              <input class="input" placeholder="Nome do novo tema" maxlength="60">
               <button class="btn btn-primario" type="button">Criar</button>
             </div>
           </div>
@@ -258,6 +245,7 @@ function abrirFormulario(produto, depois) {
       ${editando ? `<button class="btn btn-perigo esquerda" type="button" id="excluir">${icone('lixo')} Excluir</button>` : ''}
       <button class="btn" type="button" data-fechar>Cancelar</button>
       <button class="btn btn-primario" type="submit" form="form-produto" id="salvar">${editando ? 'Salvar alterações' : 'Cadastrar produto'}</button>`,
+    aoFechar: () => { if (typeof imagem === 'object') URL.revokeObjectURL(imagem.previa); },
   });
 
   const form = m.querySelector('#form-produto');
@@ -266,35 +254,42 @@ function abrirFormulario(produto, depois) {
   // ---- Imagem
   function desenharImagem() {
     const previa = $m('#previa');
-    previa.classList.toggle('tem-imagem', !!imagem);
-    previa.innerHTML = imagem
-      ? `<img src="${esc(imagem)}" alt="Prévia da imagem">`
-      : `<div class="dica">${icone('mais')}<span>${modoImagem === 'url' ? 'Cole a URL abaixo' : 'Clique ou arraste uma imagem'}</span></div>`;
+    const src = srcImagem();
+    previa.classList.toggle('tem-imagem', !!src);
+    previa.innerHTML = src
+      ? `<img src="${esc(src)}" alt="Prévia da imagem">`
+      : `<div class="dica">${icone('imagem')}<span>${modoImagem === 'url' ? 'Cole a URL abaixo' : 'Clique ou arraste uma imagem'}</span></div>`;
     m.querySelectorAll('[data-modo]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.modo === modoImagem));
     $m('#url-imagem').hidden = modoImagem !== 'url';
-    if (modoImagem === 'url' && !imagem.startsWith('data:') && !imagem.startsWith('/uploads/')) $m('#url-imagem').value = imagem;
-    $m('#remover-imagem').hidden = !imagem;
+    if (modoImagem === 'url' && typeof imagem === 'string' && !storage.ehImagemNossa(imagem)) $m('#url-imagem').value = imagem;
+    $m('#remover-imagem').hidden = !src;
+  }
+  function trocarImagem(nova) {
+    if (typeof imagem === 'object') URL.revokeObjectURL(imagem.previa);
+    imagem = nova;
+    desenharImagem();
   }
   async function usarArquivo(arquivo) {
     if (!arquivo) return;
     try {
-      imagem = await redimensionarImagem(arquivo);
+      const blob = await redimensionarImagem(arquivo);
       modoImagem = 'arquivo';
-      desenharImagem();
+      trocarImagem({ blob, previa: URL.createObjectURL(blob) });
     } catch (erro) { avisar(erro.message, 'erro'); }
   }
-  $m('#previa').addEventListener('click', () => { if (modoImagem === 'arquivo') $m('#arquivo-imagem').click(); });
-  $m('#previa').addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && modoImagem === 'arquivo') { e.preventDefault(); $m('#arquivo-imagem').click(); } });
+  const escolherArquivo = () => { if (modoImagem === 'arquivo') $m('#arquivo-imagem').click(); };
+  $m('#previa').addEventListener('click', escolherArquivo);
+  $m('#previa').addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); escolherArquivo(); } });
   $m('#arquivo-imagem').addEventListener('change', (e) => usarArquivo(e.target.files[0]));
   $m('#previa').addEventListener('dragover', (e) => { e.preventDefault(); $m('#previa').classList.add('arrastando'); });
   $m('#previa').addEventListener('dragleave', () => $m('#previa').classList.remove('arrastando'));
   $m('#previa').addEventListener('drop', (e) => { e.preventDefault(); $m('#previa').classList.remove('arrastando'); usarArquivo(e.dataTransfer.files[0]); });
   m.querySelectorAll('[data-modo]').forEach((b) => b.addEventListener('click', () => { modoImagem = b.dataset.modo; desenharImagem(); }));
-  $m('#url-imagem').addEventListener('input', debounce((e) => { imagem = e.target.value.trim(); desenharImagem(); }, 400));
-  $m('#remover-imagem').addEventListener('click', () => { imagem = ''; $m('#url-imagem').value = ''; $m('#arquivo-imagem').value = ''; desenharImagem(); });
+  $m('#url-imagem').addEventListener('input', debounce((e) => trocarImagem(e.target.value.trim()), 400));
+  $m('#remover-imagem').addEventListener('click', () => { $m('#url-imagem').value = ''; $m('#arquivo-imagem').value = ''; trocarImagem(''); });
   desenharImagem();
 
-  // ---- Código de barras: confere o dígito verificador (só alerta, não bloqueia códigos internos)
+  // ---- Código de barras: confere o dígito verificador (só alerta; códigos internos são aceitos)
   function conferirGtin() {
     const codigo = form.codigo_barras.value.replace(/\D/g, '');
     form.codigo_barras.value = codigo;
@@ -303,29 +298,23 @@ function abrirFormulario(produto, depois) {
     if (!codigo) { dica.textContent = ''; return; }
     if (codigo.length < 8) { dica.textContent = 'Use de 8 a 14 dígitos.'; return; }
     const valido = gtinValido(codigo);
-    dica.textContent = valido ? 'Dígito verificador válido.' : 'Dígito verificador não confere (verifique ou use como código interno).';
+    dica.textContent = valido ? 'Dígito verificador válido.' : 'Dígito verificador não confere (confira, ou use como código interno).';
     dica.classList.add(valido ? 'ok' : 'alerta');
   }
   form.codigo_barras.addEventListener('input', conferirGtin);
   conferirGtin();
 
-  // ---- Categorias e subcategorias (com cadastro rápido)
+  // ---- Categoria e tema (com cadastro rápido)
   function preencherCategorias(selecionada) {
-    const sel = $m('#categoria');
-    sel.innerHTML = `<option value="">Selecione…</option>${categorias.map((c) =>
+    $m('#categoria').innerHTML = `<option value="">Selecione…</option>${categorias.map((c) =>
       `<option value="${c.id}" ${c.id === Number(selecionada) ? 'selected' : ''}>${esc(c.nome)}</option>`).join('')}`;
   }
-  function preencherSubcategorias(selecionada) {
-    const cat = categorias.find((c) => c.id === Number($m('#categoria').value));
-    const sel = $m('#subcategoria');
-    sel.disabled = !cat;
-    m.querySelector('[data-nova="subcategoria"]').disabled = !cat;
-    sel.innerHTML = `<option value="">${cat ? 'Nenhuma' : 'Escolha a categoria primeiro'}</option>${(cat?.subcategorias || []).map((s) =>
-      `<option value="${s.id}" ${s.id === Number(selecionada) ? 'selected' : ''}>${esc(s.nome)}</option>`).join('')}`;
+  function preencherTemas(selecionado) {
+    $m('#tema').innerHTML = `<option value="">Sem tema</option>${temas.map((t) =>
+      `<option value="${t.id}" ${t.id === Number(selecionado) ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}`;
   }
   preencherCategorias(p.categoria_id);
-  preencherSubcategorias(p.subcategoria_id);
-  $m('#categoria').addEventListener('change', () => preencherSubcategorias(null));
+  preencherTemas(p.tema_id);
 
   m.querySelectorAll('[data-nova]').forEach((botao) => botao.addEventListener('click', () => {
     const caixa = $m(`#nova-${botao.dataset.nova}`);
@@ -339,22 +328,28 @@ function abrirFormulario(produto, depois) {
     if (nome.length < 2) return avisar('Digite um nome com pelo menos 2 letras.', 'erro');
     try {
       if (tipo === 'categoria') {
-        const nova = await api('/api/admin/categorias', { metodo: 'POST', corpo: { nome } });
+        const [nova] = await rest('categorias?select=id,nome,ordem', {
+          metodo: 'POST', admin: true, prefer: 'return=representation',
+          corpo: { nome, ordem: categorias.length + 1 },
+          mensagens: { 23505: 'Já existe uma categoria com esse nome.' },
+        });
         categorias.push(nova);
         preencherCategorias(nova.id);
-        preencherSubcategorias(null);
       } else {
-        const catId = Number($m('#categoria').value);
-        const nova = await api(`/api/admin/categorias/${catId}/subcategorias`, { metodo: 'POST', corpo: { nome } });
-        categorias.find((c) => c.id === catId).subcategorias.push(nova);
-        preencherSubcategorias(nova.id);
+        const [novo] = await rest('temas?select=id,nome,cor,ordem', {
+          metodo: 'POST', admin: true, prefer: 'return=representation',
+          corpo: { nome, cor: CORES_TEMA[temas.length % CORES_TEMA.length], ordem: temas.length + 1 },
+          mensagens: { 23505: 'Já existe um tema com esse nome.' },
+        });
+        temas.push(novo);
+        preencherTemas(novo.id);
       }
       input.value = '';
       caixa.hidden = true;
-      avisar(`${tipo === 'categoria' ? 'Categoria' : 'Subcategoria'} “${nome}” criada.`);
+      avisar(`${tipo === 'categoria' ? 'Categoria' : 'Tema'} “${nome}” criado.`);
     } catch (erro) { avisar(erro.message, 'erro'); }
   }
-  ['categoria', 'subcategoria'].forEach((tipo) => {
+  ['categoria', 'tema'].forEach((tipo) => {
     const caixa = $m(`#nova-${tipo}`);
     caixa.querySelector('button').addEventListener('click', () => criarOpcao(tipo));
     caixa.querySelector('input').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); criarOpcao(tipo); } });
@@ -366,11 +361,13 @@ function abrirFormulario(produto, depois) {
     e.preventDefault();
     const preco = reaisParaCentavos(form.preco.value);
     const estoque = Number(form.estoque.value);
+    const url = typeof imagem === 'string' ? imagem : '';
     const problemas = [
       [form.nome, form.nome.value.trim().length < 2, 'Informe o nome do produto.'],
       [form.preco, Number.isNaN(preco), 'Informe um preço válido (ex.: 12,90).'],
-      [form.estoque, !Number.isInteger(estoque) || estoque < 0, 'A quantidade deve ser um número inteiro (0 ou mais).'],
+      [form.estoque, form.estoque.value === '' || !Number.isInteger(estoque) || estoque < 0, 'A quantidade deve ser um número inteiro (0 ou mais).'],
       [form.categoria_id, !form.categoria_id.value, 'Escolha uma categoria.'],
+      [$m('#url-imagem'), url !== '' && !/^https?:\/\//i.test(url), 'A URL da imagem deve começar com http:// ou https://'],
     ];
     problemas.forEach(([campo, invalido]) => campo.setAttribute('aria-invalid', invalido));
     const primeiro = problemas.find(([, invalido]) => invalido);
@@ -379,20 +376,28 @@ function abrirFormulario(produto, depois) {
     const botao = $m('#salvar');
     botao.disabled = true;
     botao.textContent = 'Salvando…';
+    let enviada = '';
     try {
-      await api(editando ? `/api/admin/produtos/${produto.id}` : '/api/admin/produtos', {
-        metodo: editando ? 'PUT' : 'POST',
-        corpo: {
-          nome: form.nome.value, descricao: form.descricao.value, conteudo: form.conteudo.value,
-          codigo_barras: form.codigo_barras.value, preco_centavos: preco, estoque,
-          categoria_id: Number(form.categoria_id.value), subcategoria_id: Number(form.subcategoria_id.value) || null,
-          imagem, ativo: form.ativo.checked,
-        },
+      // O arquivo novo só é enviado agora; se salvar falhar, ele é apagado em seguida.
+      if (typeof imagem === 'object') {
+        botao.textContent = 'Enviando imagem…';
+        enviada = await storage.enviar(imagem.blob, 'produtos');
+      }
+      const dados = {
+        nome: form.nome.value.trim(), descricao: form.descricao.value.trim(), conteudo: form.conteudo.value.trim(),
+        codigo_barras: form.codigo_barras.value || null, preco_centavos: preco, estoque,
+        categoria_id: Number(form.categoria_id.value), tema_id: Number(form.tema_id.value) || null,
+        imagem: enviada || url, ativo: form.ativo.checked,
+      };
+      await rest(editando ? `produtos?id=eq.${produto.id}` : 'produtos', {
+        metodo: editando ? 'PATCH' : 'POST', corpo: dados, admin: true, prefer: 'return=minimal',
       });
+      if (editando && produto.imagem !== dados.imagem) await storage.apagar(produto.imagem);
       avisar(editando ? 'Produto atualizado.' : 'Produto cadastrado.');
       fecharModal();
-      depois();
+      await depois();
     } catch (erro) {
+      if (enviada) await storage.apagar(enviada);
       avisar(erro.message, 'erro');
       botao.disabled = false;
       botao.textContent = editando ? 'Salvar alterações' : 'Cadastrar produto';

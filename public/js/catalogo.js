@@ -1,317 +1,357 @@
-// Página pública do catálogo: sidebar de categorias, busca, grade e detalhes do produto.
-import { api, avisar, debounce, esc, formatarReais, icone, imagemProduto } from './util.js';
-import { carrinho, iniciarCarrinho } from './carrinho.js';
+// Catálogo público: barra lateral com categorias e temas, busca, grade e detalhes do produto.
+import { URL_BASE, configurado, rest } from './supabase.js';
+import {
+  armazenamento, debounce, esc, formatarReais, icone, imagemProduto, semAcento, slugify,
+} from './util.js';
+import { LOJA_PADRAO, aplicarCores, linkWhatsApp, logoHtml, redesHtml } from './loja.js';
 
 const $ = (id) => document.getElementById(id);
+const CACHE_LOJA = `wpv_loja:${URL_BASE}`; // evita "piscar" a cor padrão antes de carregar a da loja
 
-// O filtro fica na URL (?categoria=bebidas&subcategoria=sucos&q=cafe) para poder compartilhar o link.
-const params = new URLSearchParams(location.search);
-const estado = {
-  categoria: params.get('categoria') || '',
-  subcategoria: params.get('subcategoria') || '',
-  q: params.get('q') || '',
-  ordem: params.get('ordem') || '',
-};
-
+let loja = { ...LOJA_PADRAO, ...(configurado ? armazenamento.ler(CACHE_LOJA, {}) : {}) };
 let categorias = [];
-let produtosVisiveis = new Map();
-let requisicaoAtual = null;
+let temas = [];
+let produtos = [];
+
+// O filtro fica na URL (?categoria=etb&temas=pokemon&q=...) para dar para compartilhar o link.
+const estado = { categoria: '', temas: [], q: '', ordem: '' };
+function lerUrl() {
+  const p = new URLSearchParams(location.search);
+  estado.categoria = p.get('categoria') || '';
+  estado.temas = (p.get('temas') || '').split(',').filter(Boolean);
+  estado.q = p.get('q') || '';
+  estado.ordem = p.get('ordem') || '';
+  return p.get('produto');
+}
 
 // ---------------------------------------------------------------- Início
 async function iniciar() {
-  $('abrir-lateral').innerHTML = icone('filtro');
-  $('fechar-lateral').innerHTML = icone('fechar');
+  document.querySelectorAll('[data-icone]').forEach((el) => { el.innerHTML = icone(el.dataset.icone); });
   document.querySelector('.busca-icone').innerHTML = icone('busca');
-  document.querySelector('.marca-icone').innerHTML = icone('loja');
+  $('fechar-lateral').innerHTML = icone('fechar');
+  aplicarLoja();
+
+  if (!configurado) {
+    $('conteudo').closest('.layout').innerHTML = `
+      <div class="config-pendente">
+        <h1>Quase lá!</h1>
+        <p>Preencha o endereço e a chave pública do Supabase em <code>js/config.js</code>
+        e rode o <code>supabase/schema.sql</code> no seu projeto. O passo a passo está no README.</p>
+      </div>`;
+    return;
+  }
+
+  const produtoInicial = lerUrl();
   $('busca').value = estado.q;
   $('ordem').value = estado.ordem;
-
-  const loja = await api('/api/loja').catch(() => ({ nome: 'Catálogo' }));
-  $('nome-loja').textContent = loja.nome;
-  document.title = `${loja.nome} · Catálogo`;
-  iniciarCarrinho(loja);
-  carrinho.aoMudar(atualizarCards);
-
   ligarEventos();
-  await Promise.all([carregarCategorias(), carregarProdutos()]);
+
+  try {
+    const [linhasLoja, cats, tms, prods] = await Promise.all([
+      rest('loja?select=*&id=eq.1'),
+      rest('categorias?select=id,nome,ordem&order=ordem,nome'),
+      rest('temas?select=id,nome,cor,ordem&order=ordem,nome'),
+      rest('produtos?select=id,nome,descricao,conteudo,codigo_barras,preco_centavos,estoque,imagem,categoria_id,tema_id,criado_em&ativo=is.true&order=nome'),
+    ]);
+    if (linhasLoja[0]) {
+      loja = { ...LOJA_PADRAO, ...linhasLoja[0] };
+      armazenamento.gravar(CACHE_LOJA, loja);
+      aplicarLoja();
+    }
+    categorias = cats.map((c) => ({ ...c, slug: slugify(c.nome) }));
+    temas = tms.map((t) => ({ ...t, slug: slugify(t.nome) }));
+    const porCategoria = new Map(categorias.map((c) => [c.id, c]));
+    const porTema = new Map(temas.map((t) => [t.id, t]));
+    produtos = prods.map((p) => {
+      const categoria = porCategoria.get(p.categoria_id);
+      const tema = porTema.get(p.tema_id) || null;
+      return {
+        ...p, categoria, tema,
+        busca: semAcento(`${p.nome} ${p.descricao} ${p.conteudo} ${p.codigo_barras || ''} ${categoria?.nome || ''} ${tema?.nome || ''}`),
+      };
+    });
+  } catch (erro) {
+    $('grade').innerHTML = `<div class="vazio"><strong>Não foi possível carregar o catálogo</strong>${esc(erro.message)}</div>`;
+    $('grade').removeAttribute('aria-busy');
+    $('lista-categorias').innerHTML = '';
+    return;
+  }
+
+  renderizar();
+  $('grade').removeAttribute('aria-busy');
+  if (produtoInicial) {
+    const p = produtos.find((x) => String(x.id) === produtoInicial);
+    if (p) abrirProduto(p, { atualizarUrl: false });
+  }
 }
 
+function aplicarLoja() {
+  aplicarCores(loja.cor_primaria);
+  document.title = loja.slogan ? `${loja.nome} · ${loja.slogan}` : loja.nome;
+  document.querySelector('meta[name="description"]').content = loja.slogan || `Catálogo de produtos de ${loja.nome}.`;
+  if (loja.logo_url) $('favicon').href = loja.logo_url;
+  $('marca').querySelector('.logo').outerHTML = logoHtml(loja);
+  $('nome-loja').textContent = loja.nome;
+  $('slogan-loja').textContent = loja.slogan;
+  $('redes').innerHTML = redesHtml(loja);
+  $('rodape').innerHTML = `
+    <div class="rodape-interno">
+      <a class="marca" href="/">${logoHtml(loja)}<span class="marca-nome">${esc(loja.nome)}</span></a>
+      <span>© ${new Date().getFullYear()}</span>
+      <nav class="redes" aria-label="Redes sociais">${redesHtml(loja)}</nav>
+    </div>`;
+}
+
+// ---------------------------------------------------------------- Eventos
 function ligarEventos() {
-  const buscar = debounce(() => { estado.q = $('busca').value.trim(); aplicarFiltro({ substituir: true }); }, 300);
+  const buscar = debounce(() => { estado.q = $('busca').value.trim(); aplicarFiltro({ substituir: true }); }, 250);
   $('busca').addEventListener('input', buscar);
   $('form-busca').addEventListener('submit', (e) => { e.preventDefault(); $('busca').blur(); });
   $('ordem').addEventListener('change', (e) => { estado.ordem = e.target.value; aplicarFiltro({ substituir: true }); });
 
-  $('abrir-lateral').addEventListener('click', () => alternarLateral(true));
-  $('fechar-lateral').addEventListener('click', () => alternarLateral(false));
-  $('veu-lateral').addEventListener('click', () => alternarLateral(false));
-
   $('lista-categorias').addEventListener('click', (e) => {
     const botao = e.target.closest('[data-categoria]');
     if (!botao) return;
-    const { categoria, subcategoria } = botao.dataset;
-    // Clicar de novo na categoria ativa (sem sub) recolhe e mostra tudo.
-    if (categoria && categoria === estado.categoria && !subcategoria && !estado.subcategoria) {
-      estado.categoria = '';
-    } else {
-      estado.categoria = categoria;
-    }
-    estado.subcategoria = subcategoria || '';
+    estado.categoria = botao.dataset.categoria;
     aplicarFiltro();
-    if (subcategoria || !categoria || window.matchMedia('(max-width: 900px)').matches && !temSubcategorias(categoria)) {
-      alternarLateral(false);
-    }
   });
-
-  $('trilha').addEventListener('click', (e) => {
-    const alvo = e.target.closest('[data-ir]');
-    if (!alvo) return;
-    if (alvo.dataset.ir === 'tudo') { estado.categoria = ''; estado.subcategoria = ''; estado.q = ''; $('busca').value = ''; }
-    if (alvo.dataset.ir === 'categoria') estado.subcategoria = '';
-    if (alvo.dataset.ir === 'busca') { estado.q = ''; $('busca').value = ''; }
+  $('lista-temas').addEventListener('click', (e) => {
+    const botao = e.target.closest('[data-tema]');
+    if (!botao) return;
+    const slug = botao.dataset.tema;
+    estado.temas = estado.temas.includes(slug) ? estado.temas.filter((t) => t !== slug) : [...estado.temas, slug];
+    aplicarFiltro();
+  });
+  $('chips').addEventListener('click', (e) => {
+    const chip = e.target.closest('[data-remover]');
+    if (!chip) return;
+    const [tipo, valor] = chip.dataset.remover.split(':');
+    if (tipo === 'tema') estado.temas = estado.temas.filter((t) => t !== valor);
+    if (tipo === 'busca') { estado.q = ''; $('busca').value = ''; }
+    if (tipo === 'categoria') estado.categoria = '';
+    if (tipo === 'tudo') { Object.assign(estado, { categoria: '', temas: [], q: '' }); $('busca').value = ''; }
     aplicarFiltro();
   });
 
+  // Gaveta de filtros (celular)
+  document.querySelectorAll('[data-abrir]').forEach((b) => b.addEventListener('click', () => {
+    alternarFiltros(true);
+    $(b.dataset.abrir).scrollIntoView({ block: 'start' });
+  }));
+  $('fechar-lateral').addEventListener('click', () => alternarFiltros(false));
+  $('veu-lateral').addEventListener('click', () => alternarFiltros(false));
+  $('ver-resultados').addEventListener('click', () => alternarFiltros(false));
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && $('lateral').classList.contains('aberta')) alternarFiltros(false);
+  });
+
+  // Clique no card abre os detalhes (o link também funciona sozinho: ?produto=ID).
   $('grade').addEventListener('click', (e) => {
-    const card = e.target.closest('.card');
-    if (!card) return;
-    const produto = produtosVisiveis.get(Number(card.dataset.id));
-    const acao = e.target.closest('[data-acao]')?.dataset.acao;
-    if (acao === 'adicionar') { carrinho.adicionar(produto); avisar(`${produto.nome} adicionado ao pedido.`); }
-    if (acao === 'mais') carrinho.adicionar(produto, 1);
-    if (acao === 'menos') carrinho.adicionar(produto, -1);
-    if (acao === 'detalhes') abrirProduto(produto);
-  });
-  $('grade').addEventListener('change', (e) => {
-    if (!e.target.matches('.quantidade input')) return;
-    const produto = produtosVisiveis.get(Number(e.target.closest('.card').dataset.id));
-    carrinho.definir(produto, Number(e.target.value) || 0);
+    const link = e.target.closest('a[data-produto]');
+    if (!link || e.ctrlKey || e.metaKey || e.shiftKey) return;
+    e.preventDefault();
+    abrirProduto(produtos.find((p) => p.id === Number(link.dataset.produto)));
   });
 
   window.addEventListener('popstate', () => {
-    const p = new URLSearchParams(location.search);
-    Object.assign(estado, {
-      categoria: p.get('categoria') || '', subcategoria: p.get('subcategoria') || '',
-      q: p.get('q') || '', ordem: p.get('ordem') || '',
-    });
+    const produtoId = lerUrl();
     $('busca').value = estado.q;
     $('ordem').value = estado.ordem;
-    renderizarCategorias();
-    carregarProdutos();
+    renderizar();
+    const modal = $('modal-produto');
+    const p = produtoId && produtos.find((x) => String(x.id) === produtoId);
+    if (p) abrirProduto(p, { atualizarUrl: false });
+    else if (modal.open) modal.close();
   });
 }
 
-const temSubcategorias = (slug) => !!categorias.find((c) => c.slug === slug)?.subcategorias.length;
-
-function alternarLateral(abrir) {
+function alternarFiltros(abrir) {
   $('lateral').classList.toggle('aberta', abrir);
   $('veu-lateral').classList.toggle('aberto', abrir);
-  $('abrir-lateral').setAttribute('aria-expanded', abrir);
+  document.body.style.overflow = abrir ? 'hidden' : '';
 }
 
-/** Atualiza a URL e recarrega. Busca e ordenação usam replaceState para não encher o histórico. */
-function aplicarFiltro({ substituir = false } = {}) {
+function montarUrl(produtoId) {
   const p = new URLSearchParams();
-  for (const [chave, valor] of Object.entries(estado)) if (valor) p.set(chave, valor);
-  const busca = p.toString() ? `?${p}` : '';
-  if (busca !== location.search) {
-    history[substituir ? 'replaceState' : 'pushState'](null, '', busca || location.pathname);
-  }
-  renderizarCategorias();
-  carregarProdutos();
+  if (estado.categoria) p.set('categoria', estado.categoria);
+  if (estado.temas.length) p.set('temas', estado.temas.join(','));
+  if (estado.q) p.set('q', estado.q);
+  if (estado.ordem) p.set('ordem', estado.ordem);
+  if (produtoId) p.set('produto', produtoId);
+  const busca = p.toString();
+  return busca ? `?${busca.replace(/%2C/g, ',')}` : location.pathname;
 }
 
-// ---------------------------------------------------------------- Sidebar
-async function carregarCategorias() {
-  try {
-    categorias = await api('/api/categorias');
-  } catch (erro) {
-    $('lista-categorias').innerHTML = `<div class="vazio">${esc(erro.message)}</div>`;
-    return;
-  }
+/** Busca e ordenação usam replaceState para não encher o histórico a cada tecla. */
+function aplicarFiltro({ substituir = false } = {}) {
+  const url = montarUrl();
+  if (url !== `${location.search || location.pathname}`) history[substituir ? 'replaceState' : 'pushState'](null, '', url);
+  renderizar();
+}
+
+// ---------------------------------------------------------------- Filtragem
+/** Filtra os produtos. `ignorar` permite contar um filtro sem ele mesmo (contagens da lateral). */
+function filtrar({ ignorar } = {}) {
+  const termos = semAcento(estado.q).split(/\s+/).filter(Boolean);
+  return produtos.filter((p) => {
+    if (ignorar !== 'categoria' && estado.categoria && p.categoria?.slug !== estado.categoria) return false;
+    if (ignorar !== 'temas' && estado.temas.length && !estado.temas.includes(p.tema?.slug)) return false;
+    return termos.every((t) => p.busca.includes(t));
+  });
+}
+
+const ORDENACOES = {
+  '': (a, b) => (b.estoque > 0) - (a.estoque > 0) || a.nome.localeCompare(b.nome, 'pt-BR'),
+  recentes: (a, b) => b.criado_em.localeCompare(a.criado_em),
+  nome: (a, b) => a.nome.localeCompare(b.nome, 'pt-BR'),
+  menor_preco: (a, b) => a.preco_centavos - b.preco_centavos,
+  maior_preco: (a, b) => b.preco_centavos - a.preco_centavos,
+};
+
+// ---------------------------------------------------------------- Renderização
+function renderizar() {
+  // Ignora filtros que apontam para algo que não existe mais (link antigo).
+  if (estado.categoria && !categorias.some((c) => c.slug === estado.categoria)) estado.categoria = '';
+  estado.temas = estado.temas.filter((s) => temas.some((t) => t.slug === s));
+
   renderizarCategorias();
+  renderizarTemas();
+  const lista = filtrar().sort(ORDENACOES[estado.ordem] || ORDENACOES['']);
+  renderizarBarra(lista.length);
+  renderizarGrade(lista);
+  $('ver-resultados').textContent = lista.length === 1 ? 'Ver 1 produto' : `Ver ${lista.length} produtos`;
 }
 
 function renderizarCategorias() {
-  const totalGeral = categorias.reduce((s, c) => s + c.total, 0);
-  const botao = ({ nome, total, categoria = '', subcategoria = '', ativo, expandido }) => `
-    <button class="cat-botao${ativo ? ' ativo' : ''}" type="button"
-      data-categoria="${esc(categoria)}" ${subcategoria ? `data-subcategoria="${esc(subcategoria)}"` : ''}
-      ${expandido !== undefined ? `aria-expanded="${expandido}"` : ''} ${ativo ? 'aria-current="true"' : ''}>
-      <span class="nome">${esc(nome)}</span>
-      <span class="qtd">${total}</span>
-      ${expandido !== undefined ? `<span class="seta">${icone('seta', 'icone')}</span>` : ''}
-    </button>`;
-
-  $('lista-categorias').innerHTML = `
-    <p class="lateral-titulo">Categorias</p>
-    <ul class="lista-cat">
-      <li>${botao({ nome: 'Todos os produtos', total: totalGeral, ativo: !estado.categoria })}</li>
-      ${categorias.map((c) => {
-        const aberta = c.slug === estado.categoria;
-        const temSubs = c.subcategorias.length > 0;
-        return `<li>
-          ${botao({ nome: c.nome, total: c.total, categoria: c.slug, ativo: aberta && !estado.subcategoria, expandido: temSubs ? aberta : undefined })}
-          ${temSubs && aberta ? `<ul class="lista-sub">
-            ${c.subcategorias.map((s) => `<li>${botao({
-              nome: s.nome, total: s.total, categoria: c.slug, subcategoria: s.slug, ativo: s.slug === estado.subcategoria,
-            })}</li>`).join('')}
-          </ul>` : ''}
-        </li>`;
-      }).join('')}
-    </ul>`;
+  const base = filtrar({ ignorar: 'categoria' });
+  const contagem = (id) => base.filter((p) => p.categoria_id === id).length;
+  const totalPorCategoria = (id) => produtos.filter((p) => p.categoria_id === id).length;
+  const item = (slug, nome, n) => `
+    <li><button class="filtro${n ? '' : ' vazio-filtro'}" type="button" data-categoria="${esc(slug)}" aria-pressed="${estado.categoria === slug}">
+      <span class="nome">${esc(nome)}</span><span class="n">${n}</span>
+    </button></li>`;
+  $('lista-categorias').innerHTML = item('', 'Todos os produtos', base.length)
+    + categorias.filter((c) => totalPorCategoria(c.id)).map((c) => item(c.slug, c.nome, contagem(c.id))).join('');
 }
 
-// ---------------------------------------------------------------- Produtos
-async function carregarProdutos() {
-  requisicaoAtual?.abort();
-  const controle = new AbortController();
-  requisicaoAtual = controle;
-  renderizarTrilha();
+function renderizarTemas() {
+  const base = filtrar({ ignorar: 'temas' });
+  const visiveis = temas.filter((t) => produtos.some((p) => p.tema_id === t.id));
+  $('secao-temas').hidden = !visiveis.length;
+  document.querySelector('[data-abrir="secao-temas"]').hidden = !visiveis.length;
+  $('lista-temas').innerHTML = visiveis.map((t) => {
+    const n = base.filter((p) => p.tema_id === t.id).length;
+    return `
+      <li><button class="filtro filtro-tema${n ? '' : ' vazio-filtro'}" type="button" data-tema="${esc(t.slug)}"
+          aria-pressed="${estado.temas.includes(t.slug)}" style="--cor:${esc(t.cor)}">
+        <span class="caixinha" aria-hidden="true"></span>
+        <span class="nome">${esc(t.nome)}</span><span class="n">${n}</span>
+      </button></li>`;
+  }).join('');
+  const qtd = estado.temas.length;
+  $('contagem-temas').hidden = !qtd;
+  $('contagem-temas').textContent = qtd;
+}
 
-  const p = new URLSearchParams();
-  if (estado.categoria) p.set('categoria', estado.categoria);
-  if (estado.subcategoria) p.set('subcategoria', estado.subcategoria);
-  if (estado.q) p.set('q', estado.q);
-  if (estado.ordem) p.set('ordem', estado.ordem);
+function renderizarBarra(n) {
+  const categoria = categorias.find((c) => c.slug === estado.categoria);
+  $('titulo').textContent = categoria ? categoria.nome : 'Todos os produtos';
+  $('resultado').textContent = n === 1 ? '1 item' : `${n} itens`;
 
-  $('grade').setAttribute('aria-busy', 'true');
-  try {
-    const resposta = await fetch(`/api/produtos?${p}`, { signal: controle.signal });
-    if (!resposta.ok) throw new Error('Não foi possível carregar os produtos.');
-    const produtos = await resposta.json();
-    produtosVisiveis = new Map(produtos.map((pr) => [pr.id, pr]));
-    carrinho.sincronizar(produtos);
-    renderizarGrade(produtos);
-  } catch (erro) {
-    if (erro.name === 'AbortError') return;
-    $('grade').innerHTML = `<div class="vazio"><strong>Ops!</strong>${esc(erro.message)}</div>`;
-  } finally {
-    if (requisicaoAtual === controle) $('grade').removeAttribute('aria-busy');
+  const chips = [];
+  if (categoria) {
+    chips.push(`<button class="chip so-mobile-chip" type="button" data-remover="categoria:" aria-label="Remover filtro de categoria ${esc(categoria.nome)}">${esc(categoria.nome)}${icone('fechar')}</button>`);
   }
-}
-
-function renderizarTrilha() {
-  const cat = categorias.find((c) => c.slug === estado.categoria);
-  const sub = cat?.subcategorias.find((s) => s.slug === estado.subcategoria);
-  const partes = [];
-  if (!cat) partes.push(`<span>${estado.q ? 'Resultados da busca' : 'Todos os produtos'}</span>`);
-  if (cat) partes.push(sub ? `<button type="button" data-ir="categoria">${esc(cat.nome)}</button>` : `<span>${esc(cat.nome)}</span>`);
-  if (sub) partes.push(`<span class="sep">/</span><span>${esc(sub.nome)}</span>`);
-  if (cat || estado.q) partes.push(`<button type="button" class="limpar" data-ir="tudo">Limpar filtros</button>`);
-  $('trilha').innerHTML = partes.join('');
-}
-
-const disponibilidade = (estoque) => {
-  if (estoque <= 0) return '<span class="selo selo-perigo">Esgotado</span>';
-  if (estoque <= 5) return `<span class="selo selo-alerta">Últimas ${estoque} un.</span>`;
-  return '<span class="selo selo-sucesso">Disponível</span>';
-};
-
-function controleQuantidade(produto) {
-  const qtd = carrinho.quantidade(produto.id);
-  if (produto.estoque <= 0) return '<button class="btn btn-bloco" type="button" disabled>Indisponível</button>';
-  if (!qtd) {
-    return `<button class="btn btn-primario btn-bloco" type="button" data-acao="adicionar">${icone('mais')} <span>Adicionar<span class="texto-longo"> ao pedido</span></span></button>`;
+  for (const slug of estado.temas) {
+    const t = temas.find((x) => x.slug === slug);
+    chips.push(`<button class="chip" type="button" data-remover="tema:${esc(slug)}" style="--cor:${esc(t.cor)}" aria-label="Remover tema ${esc(t.nome)}">
+      <span class="ponto"></span>${esc(t.nome)}${icone('fechar')}</button>`);
   }
-  return `
-    <div class="quantidade" role="group" aria-label="Quantidade de ${esc(produto.nome)} no pedido">
-      <button type="button" data-acao="menos" aria-label="${qtd === 1 ? 'Remover do pedido' : 'Diminuir'}">${icone(qtd === 1 ? 'lixo' : 'menos')}</button>
-      <input type="number" min="0" max="${produto.estoque}" value="${qtd}" aria-label="Quantidade">
-      <button type="button" data-acao="mais" aria-label="Aumentar" ${qtd >= produto.estoque ? 'disabled' : ''}>${icone('mais')}</button>
-    </div>`;
+  if (estado.q) {
+    chips.push(`<button class="chip" type="button" data-remover="busca:" aria-label="Limpar busca">“${esc(estado.q)}”${icone('fechar')}</button>`);
+  }
+  if (chips.length > 1 || (chips.length && categoria)) {
+    chips.push('<button class="chip chip-limpar" type="button" data-remover="tudo:">Limpar filtros</button>');
+  }
+  $('chips').innerHTML = chips.join('');
 }
 
-function renderizarGrade(produtos) {
-  const n = produtos.length;
-  $('resultado').textContent = `${n} ${n === 1 ? 'produto encontrado' : 'produtos encontrados'}${estado.q ? ` para “${estado.q}”` : ''}`;
-  if (!n) {
-    $('grade').innerHTML = `
-      <div class="vazio">
-        <strong>Nenhum produto encontrado</strong>
-        ${estado.q ? 'Tente outra palavra ou confira o código de barras.' : 'Ainda não há produtos nesta categoria.'}
-      </div>`;
+function disponibilidade(estoque) {
+  if (estoque <= 0) return '<span class="estoque zero">Esgotado</span>';
+  if (estoque <= 3) return `<span class="estoque baixo">Últimas ${estoque} un.</span>`;
+  return '<span class="estoque">Disponível</span>';
+}
+
+const etiquetaTema = (tema) => (tema
+  ? `<span class="etiqueta-tema" style="--cor:${esc(tema.cor)}"><span class="ponto"></span>${esc(tema.nome)}</span>` : '');
+
+function renderizarGrade(lista) {
+  if (!produtos.length) {
+    $('grade').innerHTML = '<div class="vazio"><strong>Catálogo em preparação</strong>Os produtos aparecem aqui assim que forem cadastrados.</div>';
     return;
   }
-  $('grade').innerHTML = produtos.map((p) => `
-    <article class="card${p.estoque <= 0 ? ' esgotado' : ''}" data-id="${p.id}">
-      <button class="card-imagem" type="button" data-acao="detalhes" aria-label="Ver detalhes de ${esc(p.nome)}">
-        ${imagemProduto(p)}
-        ${disponibilidade(p.estoque)}
-      </button>
+  if (!lista.length) {
+    $('grade').innerHTML = `
+      <div class="vazio"><strong>Nenhum produto encontrado</strong>
+      ${estado.q ? 'Tente outra palavra ou confira o código de barras.' : 'Tente tirar algum filtro.'}</div>`;
+    return;
+  }
+  $('grade').innerHTML = lista.map((p) => `
+    <article class="card${p.estoque <= 0 ? ' esgotado' : ''}">
+      <div class="card-imagem">${imagemProduto(p)}${etiquetaTema(p.tema)}</div>
       <div class="card-corpo">
-        <span class="card-categoria">${esc(p.subcategoria || p.categoria)}</span>
-        <h3 class="card-nome"><button type="button" data-acao="detalhes">${esc(p.nome)}</button></h3>
+        <span class="card-categoria">${esc(p.categoria?.nome || '')}</span>
+        <h3 class="card-nome"><a href="?produto=${p.id}" data-produto="${p.id}">${esc(p.nome)}</a></h3>
         <span class="card-conteudo">${esc(p.conteudo)}</span>
         <div class="card-rodape">
           <span class="card-preco">${formatarReais(p.preco_centavos)}</span>
-          <div class="card-controle">${controleQuantidade(p)}</div>
+          ${disponibilidade(p.estoque)}
         </div>
       </div>
     </article>`).join('');
 }
 
-/** Quando o carrinho muda, só os controles dos cards são redesenhados (mantém a rolagem). */
-function atualizarCards() {
-  document.querySelectorAll('.card').forEach((card) => {
-    const produto = produtosVisiveis.get(Number(card.dataset.id));
-    if (!produto) return;
-    const alvo = card.querySelector('.card-controle');
-    const foco = alvo.contains(document.activeElement) ? document.activeElement.dataset.acao || 'input' : null;
-    alvo.innerHTML = controleQuantidade(produto);
-    if (foco) (alvo.querySelector(`[data-acao="${foco}"]`) || alvo.querySelector('button, input'))?.focus();
-  });
-  if ($('modal-produto').open) atualizarControleModal();
-}
-
-// ---------------------------------------------------------------- Modal de detalhes
-let produtoAberto = null;
-
-function abrirProduto(produto) {
-  produtoAberto = produto;
+// ---------------------------------------------------------------- Detalhes do produto
+function abrirProduto(produto, { atualizarUrl = true } = {}) {
+  if (!produto) return;
   const modal = $('modal-produto');
+  const preco = formatarReais(produto.preco_centavos);
+  const mensagem = produto.estoque > 0
+    ? `Olá! Tenho interesse neste produto do catálogo:\n*${produto.nome}*${produto.conteudo ? ` (${produto.conteudo})` : ''}\nPreço: ${preco}`
+    : `Olá! Pode me avisar quando este produto voltar ao estoque?\n*${produto.nome}*`;
+  const whats = linkWhatsApp(loja, `${mensagem}\n${location.origin}${location.pathname}?produto=${produto.id}`);
+
   modal.innerHTML = `
     <div class="modal-topo">
-      <span class="card-categoria">${esc(produto.categoria)}${produto.subcategoria ? ` / ${esc(produto.subcategoria)}` : ''}</span>
+      <span class="card-categoria">${esc(produto.categoria?.nome || '')}</span>
       <button class="btn btn-fantasma btn-icone" type="button" data-fechar aria-label="Fechar">${icone('fechar')}</button>
     </div>
     <div class="modal-corpo">
       <div class="produto-imagem">${imagemProduto(produto)}</div>
       <div class="produto-info">
+        ${produto.tema ? `<div class="etiquetas">${etiquetaTema(produto.tema)}</div>` : ''}
         <h2 id="titulo-produto">${esc(produto.nome)}</h2>
+        <div class="preco">${preco}</div>
         <div>${disponibilidade(produto.estoque)}</div>
-        <div class="preco">${formatarReais(produto.preco_centavos)}</div>
         ${produto.descricao ? `<p class="descricao">${esc(produto.descricao)}</p>` : ''}
         <dl class="ficha">
           ${produto.conteudo ? `<dt>Conteúdo</dt><dd>${esc(produto.conteudo)}</dd>` : ''}
           ${produto.codigo_barras ? `<dt>Código de barras</dt><dd class="mono">${esc(produto.codigo_barras)}</dd>` : ''}
-          <dt>Estoque</dt><dd>${produto.estoque > 0 ? `${produto.estoque} unidade(s)` : 'Esgotado'}</dd>
+          ${produto.estoque > 0 ? `<dt>Estoque</dt><dd>${produto.estoque} unidade(s)</dd>` : ''}
         </dl>
-        <div class="produto-acoes" id="controle-modal"></div>
+        <div class="produto-acoes">
+          ${whats ? `<a class="btn btn-whatsapp btn-bloco" href="${esc(whats)}" target="_blank" rel="noopener">${icone('whatsapp')}
+            ${produto.estoque > 0 ? 'Pedir pelo WhatsApp' : 'Avise-me quando chegar'}</a>` : ''}
+        </div>
       </div>
     </div>`;
-  atualizarControleModal();
   modal.querySelector('[data-fechar]').addEventListener('click', () => modal.close());
-  modal.addEventListener('click', (e) => { if (e.target === modal) modal.close(); }, { once: true });
-  modal.showModal();
-}
-
-function atualizarControleModal() {
-  const alvo = $('controle-modal');
-  if (!alvo || !produtoAberto) return;
-  const qtd = carrinho.quantidade(produtoAberto.id);
-  alvo.innerHTML = `
-    <div class="card-controle" style="flex:1">${controleQuantidade(produtoAberto)}</div>
-    ${qtd ? '<button class="btn" type="button" data-ver-pedido>Ver pedido</button>' : ''}`;
-  alvo.onclick = (e) => {
-    const acao = e.target.closest('[data-acao]')?.dataset.acao;
-    if (acao === 'adicionar' || acao === 'mais') carrinho.adicionar(produtoAberto, 1);
-    if (acao === 'menos') carrinho.adicionar(produtoAberto, -1);
-    if (e.target.closest('[data-ver-pedido]')) { $('modal-produto').close(); $('abrir-carrinho').click(); }
+  modal.onclick = (e) => { if (e.target === modal) modal.close(); };
+  modal.onclose = () => {
+    if (new URLSearchParams(location.search).has('produto')) history.replaceState(null, '', montarUrl());
   };
-  alvo.onchange = (e) => {
-    if (e.target.matches('input')) carrinho.definir(produtoAberto, Number(e.target.value) || 0);
-  };
+  if (atualizarUrl) history.replaceState(null, '', montarUrl(produto.id));
+  if (!modal.open) modal.showModal();
 }
 
 iniciar();

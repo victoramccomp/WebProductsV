@@ -1,114 +1,102 @@
 # WebProductsV — Catálogo de Produtos
 
-Catálogo on-line onde o dono da loja cadastra produtos num painel e os clientes montam um pedido
-para análise (sem pagamento on-line). O pedido fica salvo no banco e pode ser enviado também pelo
-WhatsApp ou por e-mail.
+Catálogo on-line de uma página: o cliente navega pelos produtos, filtra por **categoria** e
+**tema**, busca e pede pelo WhatsApp. O dono da loja gerencia tudo por um painel com login.
 
-- **Front-end:** HTML, CSS e JavaScript puros (sem frameworks, sem build).
-- **Back-end:** Node.js usando só módulos nativos (`node:http`, `node:sqlite`, `node:crypto`).
-- **Zero dependências:** não precisa de `npm install`.
+- **Front-end:** HTML, CSS e JavaScript puros (sem frameworks, sem build, sem npm).
+- **Banco, login e imagens:** [Supabase](https://supabase.com) (Postgres + Auth + Storage), acessado só com `fetch`.
+- **Hospedagem:** [Vercel](https://vercel.com) (site estático, publica a cada `git push`).
 
-Arquitetura, comparação de stacks, esquema do banco e API: [docs/ARQUITETURA.md](docs/ARQUITETURA.md).
-
----
-
-## Guia de execução
-
-### 1. Pré-requisito
-
-**Node.js 22.13 ou mais novo** (recomendado: Node 24 LTS). Confira no terminal:
-
-```bash
-node -v
-```
-
-### 2. (Opcional) Carregar produtos de exemplo
-
-Cria 4 categorias, 9 subcategorias e 19 produtos fictícios (só roda se o banco estiver vazio):
-
-```bash
-node scripts/dados-exemplo.js
-```
-
-### 3. Iniciar o servidor
-
-Dois cliques em **`iniciar-servidor.bat`** (Windows) ou, no terminal, dentro da pasta do projeto:
-
-```bash
-node server.js
-```
+Arquitetura, banco e permissões: [docs/ARQUITETURA.md](docs/ARQUITETURA.md).
 
 | Endereço | O que é |
 |---|---|
-| http://localhost:5630/ | Catálogo (clientes) |
-| http://localhost:5630/admin/ | Painel administrativo |
-
-Para usar outra porta: `PORT=8080 node server.js` (no PowerShell: `$env:PORT=8080; node server.js`).
-
-### 4. Primeiro acesso ao painel
-
-Abra `/admin/`. Na primeira vez, aparece a tela **Primeiro acesso**: crie o administrador com
-nome, e-mail e senha (mínimo de 8 caracteres). Essa tela some depois que existe um administrador.
-
-Em seguida, vá em **Configurações** e preencha o nome da loja, o **WhatsApp** e o **e-mail** que
-recebem os pedidos. Sem eles, os botões "Enviar pelo WhatsApp/e-mail" não aparecem para o cliente.
-
-### 5. Roteiro de teste
-
-1. **Painel › Categorias:** crie uma categoria e uma subcategoria.
-2. **Painel › Produtos › Novo produto:** preencha os campos, arraste uma imagem (ou cole uma URL),
-   crie uma categoria pelo botão **+** ao lado do campo e salve. Teste também editar e excluir.
-3. Na tabela, clique nos títulos das colunas para **ordenar** e use a **busca**.
-4. **Catálogo:** filtre pela sidebar (categoria → subcategoria), busque por nome, descrição ou
-   código de barras e mude a ordenação.
-5. Adicione produtos, abra **Meu pedido**, ajuste as quantidades, preencha seus dados e envie.
-   Na tela de sucesso, teste os botões de WhatsApp, e-mail e "Copiar resumo".
-6. **Painel › Pedidos:** abra o pedido, mude para **Aprovado** e confira que o estoque baixou.
-   Mude para **Cancelado** e veja o estoque voltar.
-7. Tente pedir mais unidades do que o estoque (ou um produto esgotado): o servidor recusa e o
-   carrinho se ajusta.
-
-### 6. Backup e reset
-
-- Todos os dados ficam em `data/loja.db` e as imagens em `uploads/`. **Backup = copiar essas duas pastas**
-  (com o servidor parado).
-- Para começar do zero: pare o servidor e apague `data/` e o conteúdo de `uploads/`.
-- Esqueceu a senha do admin? Pare o servidor, apague a tabela de usuários e abra `/admin/` para
-  fazer o primeiro acesso de novo:
-
-  ```bash
-  node -e "const {DatabaseSync}=require('node:sqlite');new DatabaseSync('data/loja.db').exec('DELETE FROM usuarios')"
-  ```
+| `/` | Catálogo (clientes) |
+| `/admin/` | Painel: produtos, categorias e temas, aparência da loja, minha conta |
 
 ---
 
-## Colocando no ar (produção)
+## Colocando no ar (uma vez só)
 
-1. Um servidor com Node 22.13+ (VPS de US$ 4–6/mês, Render, Railway, Fly.io com volume persistente).
-2. Copie o projeto e rode `node server.js` como serviço (systemd, PM2 ou o serviço da plataforma).
-3. Coloque um proxy com **HTTPS** na frente. Exemplo com Caddy (certificado automático):
+### 1. Criar o projeto no Supabase
+1. Em [supabase.com](https://supabase.com) → **New project**. Região sugerida: **South America (São Paulo)**.
+2. Use um projeto **só para o catálogo** (não misture com outros sistemas).
 
+### 2. Criar as tabelas
+No painel do Supabase → **SQL Editor** → **New query**:
+1. Cole todo o conteúdo de [`supabase/schema.sql`](supabase/schema.sql) e clique em **Run**.
+2. Em outra query, cole [`supabase/dados-iniciais.sql`](supabase/dados-iniciais.sql) e **Run**
+   (traz as categorias Blister, Box Colecionável e ETB, o tema Pokémon e o produto da versão anterior).
+
+> Os dois arquivos podem ser rodados de novo sem estragar nada. Quando o `schema.sql` mudar em
+> alguma atualização, basta rodá-lo outra vez.
+
+### 3. Criar o administrador
+1. **Authentication → Sign In / Providers → Email**: desligue **Allow new users to sign up**
+   (ninguém precisa se cadastrar; só você entra no painel).
+2. **Authentication → Users → Add user → Create new user**: seu e-mail e uma senha forte,
+   com **Auto Confirm User** marcado.
+3. No **SQL Editor**, dê permissão de admin a essa conta (troque o e-mail):
+
+   ```sql
+   insert into public.admins (user_id)
+   select id from auth.users where email = 'seu@email.com'
+   on conflict do nothing;
    ```
-   minhaloja.com.br {
-     reverse_proxy localhost:5630
-   }
-   ```
 
-4. Atrás do proxy, inicie com `TRUST_PROXY=1` para os limites por IP e o cookie `Secure`
-   funcionarem corretamente.
-5. Faça backup periódico de `data/` e `uploads/`.
+Ter conta no Supabase **não basta** para mexer no catálogo: só quem está na tabela `admins` grava.
 
-## Variáveis de ambiente
+### 4. Ligar o site ao Supabase
+**Project Settings → API Keys** (ou o botão **Connect**): copie a **Project URL** e a
+**Publishable key** (`sb_publishable_...`) para [`public/js/config.js`](public/js/config.js):
 
-| Variável | Padrão | Para quê |
-|---|---|---|
-| `PORT` | `5630` | Porta HTTP |
-| `HOST` | `0.0.0.0` | Interface de rede (use `127.0.0.1` para aceitar só conexões locais) |
-| `DB_PATH` | `data/loja.db` | Caminho do banco SQLite |
-| `TRUST_PROXY` | (vazio) | `1` quando estiver atrás de Caddy/Nginx |
+```js
+export const CONFIG = {
+  supabaseUrl: 'https://abcdefghijkl.supabase.co',
+  supabaseKey: 'sb_publishable_...',
+};
+```
 
-## Personalizando o visual
+Essas duas informações são públicas (vão para o navegador). **Nunca** use a *Secret key*.
+Faça commit e push dessa alteração.
 
-As cores ficam em variáveis no topo de [`public/css/base.css`](public/css/base.css)
-(`--primaria`, `--destaque`, `--fundo`…), com versão para tema escuro logo abaixo. Para aplicar a
-identidade visual da loja, troque esses tokens e o ícone `public/img/icone.svg`.
+### 5. Publicar na Vercel
+1. Em [vercel.com](https://vercel.com) → **Add New… → Project** → importe o repositório `WebProductsV` do GitHub.
+2. **Framework Preset: Other**. Não precisa de comando de build: o `vercel.json` já indica a pasta `public`.
+3. **Deploy**. A cada `git push` na `main`, o site é atualizado sozinho.
+4. (Opcional) **Settings → Domains** para usar um domínio próprio.
+
+### 6. Primeiros passos no painel
+Abra `https://seu-site.vercel.app/admin/`, entre e:
+1. **Aparência da loja:** nome, slogan, logo, cor da marca, Instagram, WhatsApp, Facebook e TikTok.
+2. **Produtos:** envie de novo a foto da *Coleção Treinador Avançado* (o arquivo antigo está em
+   `uploads/` nesta pasta, fora do Git) e cadastre os demais produtos.
+3. **Categorias e temas:** ajuste nomes, ordem e a cor de cada tema.
+
+---
+
+## Rodando no computador
+
+```bash
+python -m http.server 5630 --directory public
+```
+
+Ou dois cliques em `iniciar-servidor.bat`. Abra http://localhost:5630 — o site usa o Supabase
+configurado em `js/config.js`.
+
+### Testar com um Supabase local (opcional, precisa do Docker)
+
+```bash
+npx supabase start -x realtime,studio,logflare,vector,edge-runtime,mailpit,postgres-meta,imgproxy,supavisor
+```
+
+Depois aplique `supabase/schema.sql` e `supabase/dados-iniciais.sql` no banco local, crie um usuário
+(e a linha em `admins`) e abra http://localhost:5630/?local=1. O `?local=1` fica salvo no navegador;
+`?local=0` volta para o projeto de produção. Para desligar: `npx supabase stop`.
+
+## Personalização
+
+- **Pelo painel:** nome, slogan, logo, cor da marca e redes sociais. Os textos sobre a cor da
+  marca ficam brancos ou escuros automaticamente, e cores muito claras são escurecidas onde viram texto.
+- **Pelo código:** as demais cores (fundo, bordas, textos) estão em variáveis no topo de
+  [`public/css/base.css`](public/css/base.css). O catálogo usa sempre o tema claro; o painel segue o tema do sistema.

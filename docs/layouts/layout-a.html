@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layout A · Vitrine com barra lateral</title>
+<style>
+  :root { --marca: #4f46e5; --marca-suave: #eef2ff; --fundo: #f8fafc; --sup: #fff; --borda: #e2e8f0; --texto: #0f172a; --t2: #475569; --t3: #94a3b8; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 "Segoe UI", system-ui, sans-serif; color: var(--texto); background: var(--fundo); }
+  svg { display: block; }
+  .topo { background: var(--sup); border-bottom: 1px solid var(--borda); }
+  .topo-in { max-width: 1280px; margin: 0 auto; padding: 14px 28px; display: flex; align-items: center; gap: 24px; }
+  .marca { display: flex; align-items: center; gap: 12px; }
+  .marca .logo { width: 42px; height: 42px; }
+  .marca strong { display: block; font-size: 18px; }
+  .marca small { color: var(--t2); font-size: 12.5px; }
+  .busca { flex: 1; max-width: 480px; margin-left: auto; position: relative; }
+  .busca input { width: 100%; height: 40px; border: 1px solid var(--borda); border-radius: 10px; background: var(--fundo); padding: 0 14px 0 40px; font: inherit; }
+  .busca svg { position: absolute; left: 13px; top: 11px; width: 18px; color: var(--t3); }
+  .redes { display: flex; gap: 8px; }
+  .redes a { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--borda); color: var(--texto); text-decoration: none; font-weight: 600; font-size: 13.5px; }
+  .redes a svg { width: 18px; }
+  .redes a.insta { background: var(--marca); border-color: var(--marca); color: #fff; }
+  .layout { max-width: 1280px; margin: 0 auto; padding: 24px 28px; display: grid; grid-template-columns: 230px 1fr; gap: 28px; }
+  .lateral h3 { font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--t3); margin: 0 0 8px 10px; }
+  .lateral ul { list-style: none; margin: 0 0 26px; padding: 0; }
+  .lateral li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: var(--t2); font-weight: 500; }
+  .lateral li .n { margin-left: auto; font-size: 12.5px; color: var(--t3); }
+  .lateral li.ativo { background: var(--marca-suave); color: var(--marca); font-weight: 700; }
+  .lateral li.ativo .n { color: var(--marca); }
+  .check { width: 18px; height: 18px; border-radius: 5px; border: 2px solid var(--borda); display: grid; place-items: center; flex: none; }
+  .check.on { background: var(--c); border-color: var(--c); }
+  .check.on::after { content: ""; width: 8px; height: 4px; border: solid #fff; border-width: 0 0 2.4px 2.4px; transform: rotate(-45deg) translate(1px, -1px); }
+  .ponto { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+  .barra { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+  .barra h1 { margin: 0; font-size: 24px; }
+  .barra .qtd { color: var(--t2); font-size: 14px; }
+  .chips { display: flex; gap: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px 4px 11px; border-radius: 999px; background: var(--sup); border: 1px solid var(--borda); font-size: 13px; font-weight: 600; }
+  .chip svg { width: 14px; color: var(--t3); }
+  .ordem { margin-left: auto; height: 36px; border: 1px solid var(--borda); border-radius: 8px; padding: 0 12px; font: inherit; font-size: 14px; background: var(--sup); }
+  .grade { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
+  .card { background: var(--sup); border: 1px solid var(--borda); border-radius: 14px; overflow: hidden; }
+  .card .img { aspect-ratio: 10/9; position: relative; }
+  .card .img svg { width: 100%; height: 100%; }
+  .tag { position: absolute; left: 10px; top: 10px; background: rgba(255,255,255,.92); color: var(--c); font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; display: flex; align-items: center; gap: 5px; }
+  .tag .ponto { width: 7px; height: 7px; }
+  .card .corpo { padding: 12px 14px 15px; }
+  .cat { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--t3); font-weight: 700; }
+  .card h4 { margin: 2px 0 1px; font-size: 15px; }
+  .conteudo { font-size: 13px; color: var(--t2); }
+  .rodape-card { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+  .preco { font-size: 18px; font-weight: 800; }
+  .estoque { font-size: 12px; font-weight: 600; color: #15803d; }
+  .estoque.baixo { color: #b45309; } .estoque.zero { color: #b91c1c; }
+  .card.esgotado .img { filter: grayscale(.8); opacity: .6; }
+  .filtros-mobile { display: none; }
+  @media (max-width: 700px) {
+    .topo-in { flex-wrap: wrap; padding: 12px 16px; gap: 12px; }
+    .redes a span { display: none; } .redes a { width: 40px; padding: 0; justify-content: center; }
+    .redes { margin-left: auto; }
+    .busca { order: 3; flex-basis: 100%; max-width: none; }
+    .layout { grid-template-columns: 1fr; padding: 16px; }
+    .lateral { display: none; }
+    .filtros-mobile { display: flex; gap: 8px; margin-bottom: 14px; }
+    .filtros-mobile button { height: 38px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--borda); background: var(--sup); font: inherit; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 7px; }
+    .filtros-mobile button svg { width: 16px; }
+    .filtros-mobile .badge { background: var(--marca); color: #fff; border-radius: 999px; font-size: 11px; padding: 1px 7px; }
+    .barra h1 { font-size: 20px; } .ordem { display: none; }
+    .grade { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+    .card .corpo { padding: 10px 11px 12px; } .card h4 { font-size: 14px; } .preco { font-size: 16px; }
+    .rodape-card { flex-direction: column; align-items: flex-start; gap: 2px; }
+  }
+</style>
+</head>
+<body>
+<header class="topo"><div class="topo-in" id="topo"></div></header>
+<div class="layout">
+  <aside class="lateral" id="lateral"></aside>
+  <main>
+    <div class="filtros-mobile" id="filtros-mobile"></div>
+    <div class="barra" id="barra"></div>
+    <div class="grade" id="grade"></div>
+  </main>
+</div>
+<script src="mock.js"></script>
+<script>
+  const { loja, categorias, temas, produtos, corTema, reais, arte, logo, icones } = MOCK;
+  const temasAtivos = ['Games', 'Espaço'];
+  document.getElementById('topo').innerHTML = `
+    <div class="marca"><span class="logo">${logo('var(--marca)')}</span><div><strong>${loja.nome}</strong><small>${loja.slogan}</small></div></div>
+    <label class="busca">${icones.busca}<input placeholder="Buscar produtos…"></label>
+    <div class="redes"><a class="insta" href="#">${icones.instagram}<span>${loja.instagram}</span></a><a href="#">${icones.whatsapp}<span>WhatsApp</span></a></div>`;
+  document.getElementById('lateral').innerHTML = `
+    <h3>Categorias</h3>
+    <ul><li class="ativo">Todos os produtos<span class="n">70</span></li>${categorias.map((c) => `<li>${c.nome}<span class="n">${c.qtd}</span></li>`).join('')}</ul>
+    <h3>Temas</h3>
+    <ul>${temas.map((t) => `<li style="--c:${t.cor}"><span class="check ${temasAtivos.includes(t.nome) ? 'on' : ''}"></span>${t.nome}<span class="n">${t.qtd}</span></li>`).join('')}</ul>`;
+  document.getElementById('filtros-mobile').innerHTML = `<button>${icones.filtro} Categorias</button><button>Temas <span class="badge">2</span></button>`;
+  document.getElementById('barra').innerHTML = `
+    <h1>Todos os produtos</h1><span class="qtd">34 itens</span>
+    <div class="chips">${temasAtivos.map((t) => `<span class="chip">Tema: ${t} ${icones.fechar}</span>`).join('')}</div>
+    <select class="ordem"><option>Mais recentes</option></select>`;
+  document.getElementById('grade').innerHTML = produtos.map((p) => `
+    <article class="card ${p.estoque ? '' : 'esgotado'}" style="--c:${corTema(p.tema)}">
+      <div class="img">${arte(p)}<span class="tag"><span class="ponto"></span>${p.tema}</span></div>
+      <div class="corpo"><div class="cat">${p.categoria}</div><h4>${p.nome}</h4><div class="conteudo">${p.conteudo}</div>
+        <div class="rodape-card"><span class="preco">${reais(p.preco)}</span>
+        <span class="estoque ${p.estoque === 0 ? 'zero' : p.estoque <= 3 ? 'baixo' : ''}">${p.estoque === 0 ? 'Esgotado' : p.estoque <= 3 ? `Últimas ${p.estoque}` : 'Disponível'}</span></div>
+      </div>
+    </article>`).join('');
+</script>
+</body>
+</html>

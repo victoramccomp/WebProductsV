@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Layout C · Prateleiras por categoria</title>
+<style>
+  :root { --marca: #14b8a6; --marca-2: #5eead4; --fundo: #0b1018; --sup: #131a25; --sup-2: #1b2433; --borda: #232e40; --texto: #e6edf6; --t2: #9aa8bb; --t3: #64748b; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.45 "Segoe UI", system-ui, sans-serif; color: var(--texto); background: var(--fundo); overflow-x: hidden; }
+  svg { display: block; }
+  .topo { position: sticky; top: 0; z-index: 3; background: rgba(11,16,24,.92); border-bottom: 1px solid var(--borda); }
+  .topo-in { max-width: 1280px; margin: 0 auto; padding: 12px 32px; display: flex; align-items: center; gap: 22px; }
+  .marca { display: flex; align-items: center; gap: 11px; font-weight: 800; font-size: 18px; }
+  .marca .logo { width: 38px; height: 38px; }
+  .ancoras { display: flex; gap: 4px; margin-left: 10px; }
+  .ancoras span { padding: 7px 13px; border-radius: 999px; color: var(--t2); font-weight: 600; font-size: 14px; }
+  .ancoras span.ativo { background: var(--sup-2); color: var(--texto); }
+  .direita { margin-left: auto; display: flex; gap: 8px; align-items: center; }
+  .icone-btn { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--sup-2); color: var(--texto); }
+  .icone-btn svg { width: 19px; }
+  .icone-btn.insta { background: var(--marca); color: #04211e; width: auto; padding: 0 15px; display: flex; gap: 8px; font-weight: 700; font-size: 14px; }
+  .principal { max-width: 1280px; margin: 0 auto; padding: 22px 32px 40px; }
+  .boas-vindas { display: flex; align-items: end; justify-content: space-between; margin-bottom: 18px; }
+  .boas-vindas h1 { margin: 0; font-size: 28px; letter-spacing: -.02em; }
+  .boas-vindas h1 em { font-style: normal; color: var(--marca-2); }
+  .boas-vindas p { margin: 2px 0 0; color: var(--t2); }
+  .temas { display: flex; gap: 22px; margin-bottom: 30px; }
+  .tema { display: grid; justify-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--t2); }
+  .tema .bola { width: 74px; height: 74px; border-radius: 50%; padding: 3px; background: var(--borda); }
+  .tema .bola > div { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; border: 3px solid var(--fundo); background: var(--c); display: grid; place-items: center; }
+  .tema .bola svg { width: 100%; height: 100%; }
+  .tema.on { color: var(--texto); }
+  .tema.on .bola { background: conic-gradient(var(--marca), var(--marca-2), var(--marca)); }
+  .tema .todos { color: var(--texto); font-weight: 800; font-size: 15px; background: var(--sup-2) !important; }
+  .prateleira { margin-bottom: 30px; }
+  .prateleira header { display: flex; align-items: baseline; gap: 10px; margin-bottom: 12px; }
+  .prateleira h2 { margin: 0; font-size: 20px; }
+  .prateleira header span { color: var(--t3); font-size: 13.5px; }
+  .prateleira header a { margin-left: auto; color: var(--marca-2); font-weight: 600; font-size: 14px; text-decoration: none; display: flex; align-items: center; gap: 2px; }
+  .prateleira header a svg { width: 16px; }
+  .fila { display: grid; grid-auto-flow: column; grid-auto-columns: 232px; gap: 16px; }
+  .card { background: var(--sup); border: 1px solid var(--borda); border-radius: 16px; overflow: hidden; }
+  .card .img { aspect-ratio: 4/3; position: relative; }
+  .card .img svg { width: 100%; height: 100%; }
+  .card .tag { position: absolute; right: 10px; top: 10px; background: rgba(11,16,24,.75); color: #fff; font-size: 11.5px; font-weight: 700; padding: 3px 9px; border-radius: 999px; display: flex; gap: 5px; align-items: center; }
+  .card .tag i { width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+  .card .corpo { padding: 11px 14px 14px; }
+  .card h4 { margin: 0; font-size: 15px; }
+  .conteudo { font-size: 13px; color: var(--t2); }
+  .linha { display: flex; justify-content: space-between; align-items: center; margin-top: 9px; }
+  .preco { font-size: 18px; font-weight: 800; color: var(--marca-2); }
+  .estoque { font-size: 12px; color: var(--t2); }
+  .estoque.zero { color: #f87171; font-weight: 700; }
+  .card.esgotado .img svg { filter: grayscale(1) brightness(.6); }
+  @media (max-width: 700px) {
+    .topo-in { padding: 10px 14px; gap: 10px; }
+    .ancoras, .icone-btn.insta span { display: none; }
+    .icone-btn.insta { width: 40px; padding: 0; justify-content: center; }
+    .principal { padding: 16px 14px 30px; }
+    .boas-vindas h1 { font-size: 21px; } .boas-vindas p { font-size: 13.5px; }
+    .temas { gap: 14px; margin-bottom: 22px; }
+    .tema .bola { width: 60px; height: 60px; }
+    .prateleira h2 { font-size: 17px; }
+    .fila { grid-auto-columns: 158px; gap: 10px; }
+    .card h4 { font-size: 13.5px; } .preco { font-size: 15.5px; } .estoque { display: none; }
+  }
+</style>
+</head>
+<body>
+<header class="topo"><div class="topo-in" id="topo"></div></header>
+<main class="principal">
+  <div class="boas-vindas" id="boas-vindas"></div>
+  <div class="temas" id="temas"></div>
+  <div id="prateleiras"></div>
+</main>
+<script src="mock.js"></script>
+<script>
+  const { loja, categorias, temas, produtos, corTema, reais, arte, logo, icones } = MOCK;
+  document.getElementById('topo').innerHTML = `
+    <div class="marca"><span class="logo">${logo('var(--marca)')}</span>${loja.nome}</div>
+    <nav class="ancoras">${['Tudo', ...categorias.map((c) => c.nome)].map((n, i) => `<span class="${i ? '' : 'ativo'}">${n}</span>`).join('')}</nav>
+    <div class="direita"><span class="icone-btn">${icones.busca}</span><span class="icone-btn">${icones.whatsapp}</span><span class="icone-btn insta">${icones.instagram}<span>${loja.instagram}</span></span></div>`;
+  document.getElementById('boas-vindas').innerHTML = `<div><h1>Escolha pelo <em>tema</em> que você curte</h1><p>${loja.slogan} · 70 produtos</p></div>`;
+  const amostra = (tema) => produtos.find((p) => p.tema === tema);
+  document.getElementById('temas').innerHTML = `
+    <div class="tema on"><div class="bola"><div class="todos">Todos</div></div>Todos</div>
+    ${temas.map((t) => `<div class="tema" style="--c:${t.cor}"><div class="bola"><div>${arte({ ...amostra(t.nome), id: 900 + t.qtd })}</div></div>${t.nome}</div>`).join('')}`;
+  const porCategoria = categorias.slice(0, 3).map((c) => {
+    const itens = produtos.filter((p) => p.categoria === c.nome);
+    const singular = { Camisetas: 'Camiseta', Canecas: 'Caneca', Chaveiros: 'Chaveiro' }[c.nome];
+    const conteudo = itens[0].conteudo;
+    const extras = produtos.filter((p) => p.categoria !== c.nome)
+      .map((p) => ({ ...p, categoria: c.nome, conteudo, nome: `${singular} ${p.nome.split(' ').slice(1).join(' ')}` }));
+    return { ...c, itens: [...itens, ...extras].slice(0, 6) };
+  });
+  document.getElementById('prateleiras').innerHTML = porCategoria.map((c, ci) => `
+    <section class="prateleira">
+      <header><h2>${c.nome}</h2><span>${c.qtd} itens</span><a href="#">Ver todos ${icones.seta}</a></header>
+      <div class="fila">${c.itens.map((p, i) => `
+        <article class="card ${p.estoque ? '' : 'esgotado'}" style="--c:${corTema(p.tema)}">
+          <div class="img">${arte({ ...p, id: p.id + ci * 50 + i * 7 })}<span class="tag"><i></i>${p.tema}</span></div>
+          <div class="corpo"><h4>${p.nome}</h4><div class="conteudo">${p.conteudo}</div>
+            <div class="linha"><span class="preco">${reais(p.preco)}</span><span class="estoque ${p.estoque ? '' : 'zero'}">${p.estoque ? `${p.estoque} em estoque` : 'Esgotado'}</span></div></div>
+        </article>`).join('')}</div>
+    </section>`).join('');
+</script>
+</body>
+</html>

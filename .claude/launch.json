@@ -3,9 +3,15 @@
   "configurations": [
     {
       "name": "webproductsv",
-      "runtimeExecutable": "node",
+      "runtimeExecutable": "python",
       "runtimeArgs": [
-        "server.js"
+        "-m",
+        "http.server",
+        "5630",
+        "--bind",
+        "127.0.0.1",
+        "--directory",
+        "public"
       ],
       "port": 5630
     }
