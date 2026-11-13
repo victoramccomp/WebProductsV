@@ -25,7 +25,10 @@ export async function vistaProdutos(vista) {
   vista.innerHTML = `
     <div class="cabecalho">
       <div><h1>Produtos</h1><p>Cadastre, edite e controle o estoque do catálogo.</p></div>
-      <button class="btn btn-primario" id="novo-produto">${icone('mais')} Novo produto</button>
+      <div class="cabecalho-acoes">
+        <a class="btn" href="#/pdf">${icone('documento')} Catálogo em PDF</a>
+        <button class="btn btn-primario" id="novo-produto">${icone('mais')} Novo produto</button>
+      </div>
     </div>
     <div class="indicadores" id="indicadores"></div>
     <div class="ferramentas">

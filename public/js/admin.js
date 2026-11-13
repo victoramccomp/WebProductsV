@@ -6,6 +6,7 @@ import { LOJA_PADRAO, aplicarCores, logoHtml } from './loja.js';
 import { vistaProdutos } from './admin-produtos.js';
 import { vistaOrganizacao } from './admin-organizacao.js';
 import { vistaAparencia } from './admin-aparencia.js';
+import { vistaPdf } from './admin-pdf.js';
 
 const $ = (id) => document.getElementById(id);
 const vista = $('vista');
@@ -85,6 +86,7 @@ function mostrarEntrada(tipo, titulo = '', mensagem = '', tentarDeNovo = false) 
 const ROTAS = {
   produtos: { titulo: 'Produtos', render: vistaProdutos },
   organizacao: { titulo: 'Categorias e temas', render: vistaOrganizacao },
+  pdf: { titulo: 'Catálogo em PDF', render: vistaPdf },
   aparencia: { titulo: 'Aparência da loja', render: (v) => vistaAparencia(v, { aoSalvar: mostrarLoja }) },
   conta: { titulo: 'Minha conta', render: vistaConta },
 };

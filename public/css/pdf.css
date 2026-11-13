@@ -1,0 +1,212 @@
+/* ==========================================================================
+   Painel › Catálogo em PDF: opções, pré-visualização e folhas A4 para impressão
+   ========================================================================== */
+.pdf-editor { display: grid; grid-template-columns: 330px minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+.pdf-opcoes { display: grid; gap: 1rem; position: sticky; top: 1.5rem; max-height: calc(100dvh - 3rem); overflow-y: auto; padding-right: 2px; }
+.pdf-opcoes .secao { padding: 1rem; gap: .8rem; }
+.pdf-opcoes .grade-campos { grid-template-columns: 1fr 1fr; gap: .6rem; }
+
+.pdf-layouts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; }
+.pdf-layout {
+  position: relative; display: grid; gap: .15rem; align-content: start; cursor: pointer;
+  padding: .5rem; border: 1px solid var(--borda-forte); border-radius: var(--raio-sm); background: var(--superficie);
+}
+.pdf-layout input { position: absolute; opacity: 0; pointer-events: none; }
+.pdf-layout:has(input:checked) { border-color: var(--texto); box-shadow: 0 0 0 1px var(--texto); }
+.pdf-layout:has(input:focus-visible) { outline: 2px solid var(--foco); outline-offset: 2px; }
+.pdf-layout strong { font-size: .8rem; line-height: 1.2; }
+.pdf-layout small { font-size: .7rem; color: var(--texto-3); line-height: 1.25; }
+.pdf-desenho { display: grid; gap: 3px; height: 46px; margin-bottom: .3rem; padding: 4px; border-radius: 4px; background: var(--superficie-2); }
+.pdf-desenho i { border-radius: 2px; background: var(--borda-forte); }
+.pdf-desenho-grade { grid-template-columns: repeat(3, 1fr); }
+.pdf-desenho-detalhado { grid-template-columns: repeat(2, 1fr); }
+.pdf-desenho-detalhado i { background: linear-gradient(90deg, var(--borda-forte) 38%, transparent 38% 46%, var(--borda) 46%); }
+.pdf-desenho-lista i { background: linear-gradient(90deg, var(--borda-forte) 14%, transparent 14% 20%, var(--borda) 20% 78%, transparent 78% 84%, var(--borda-forte) 84%); }
+.pdf-layout:has(input:checked) .pdf-desenho i:nth-child(odd) { background-color: var(--marca); }
+.pdf-layout:has(input:checked) .pdf-desenho-grade i { background: var(--marca); }
+
+.pdf-checks, .pdf-filtro { display: grid; gap: .45rem; }
+.pdf-checks .interruptor, .pdf-filtro .interruptor { font-weight: 500; font-size: .88rem; }
+.pdf-checks small { color: var(--texto-3); font-weight: 400; }
+.pdf-filtro { border: 0; margin: 0; padding: 0; }
+.pdf-filtro legend { padding: 0; margin-bottom: .35rem; }
+.pdf-filtro .interruptor small { margin-left: auto; color: var(--texto-3); font-variant-numeric: tabular-nums; }
+.pdf-filtro .ponto-tema { margin-right: 0; }
+
+.pdf-previa { min-width: 0; display: grid; gap: .6rem; }
+.pdf-resumo { display: flex; justify-content: space-between; align-items: center; gap: .4rem 1rem; flex-wrap: wrap; font-size: .85rem; color: var(--texto-2); }
+.pdf-resumo #pdf-resumo { font-weight: 700; color: var(--texto); }
+.pdf-dica { display: inline-flex; align-items: center; gap: .35rem; }
+.pdf-dica .icone { width: 16px; height: 16px; }
+.pdf-palco { position: relative; overflow: hidden; }
+
+/* ---------- Folhas (sempre claras, mesmo com o painel no tema escuro) ---------- */
+.pdf-folhas {
+  --superficie-2: #f1f5f9; --texto-3: #94a3b8;
+  width: 210mm; display: grid; gap: 18px; margin-inline: auto; transform-origin: top left;
+  color: #0f172a; font-family: var(--fonte); font-size: 9.5pt; line-height: 1.35;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.pdf-folhas a { color: inherit; text-decoration: none; }
+.pdf-vazio { padding: 3rem 1rem; text-align: center; color: var(--texto-2); background: var(--superficie); border: 1px dashed var(--borda-forte); border-radius: var(--raio); }
+.pdf-vazio strong { display: block; color: var(--texto); }
+
+.folha {
+  position: relative; width: 210mm; height: 297mm; overflow: hidden;
+  display: flex; flex-direction: column; background: #fff;
+  box-shadow: 0 1px 3px rgb(15 23 42 / .12), 0 8px 24px rgb(15 23 42 / .12);
+}
+
+/* Cabeçalho e rodapé das páginas de produtos */
+.folha-produtos::before { content: ""; flex: none; height: 2.5mm; background: var(--marca); }
+.folha-topo {
+  flex: none; display: flex; align-items: center; justify-content: space-between; gap: 6mm;
+  margin: 0 12mm; padding: 5mm 0 3.5mm; border-bottom: .3mm solid #e2e8f0;
+}
+.folha-marca { display: flex; align-items: center; gap: 3mm; min-width: 0; }
+.folha-marca > div { min-width: 0; }
+.folha-logo { width: 11mm; height: 11mm; border-radius: 2.5mm; font-size: 9pt; }
+.folha-marca strong { display: block; font-size: 12pt; line-height: 1.2; }
+.folha-marca small { display: block; color: #475569; font-size: 8pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.folha-titulo { flex: none; font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--marca-tinta-claro); }
+.folha-conteudo { flex: 1; min-height: 0; overflow: hidden; padding: 5mm 12mm 4mm; }
+.folha-rodape { flex: none; display: grid; gap: 1.2mm; margin: 0 12mm; padding: 3mm 0 6mm; border-top: .3mm solid #e2e8f0; font-size: 7.5pt; color: #475569; }
+.folha-rodape-linha { display: flex; align-items: center; justify-content: space-between; gap: 4mm; }
+.folha-redes { display: flex; flex-wrap: wrap; gap: 1.2mm 4.5mm; }
+.folha-redes a { display: inline-flex; align-items: center; gap: 1.2mm; color: #0f172a; font-weight: 600; }
+.folha-redes svg { width: 3.6mm; height: 3.6mm; color: var(--marca-tinta-claro); }
+.folha-num { flex: none; font-weight: 700; color: var(--marca-tinta-claro); font-variant-numeric: tabular-nums; }
+.folha-aviso { margin: 0; color: #94a3b8; font-size: 7pt; }
+
+/* Seções (categoria ou tema) */
+.pdf-secao {
+  display: flex; align-items: center; justify-content: space-between; gap: 4mm;
+  margin: 0 0 3.5mm; padding: 2mm 4mm; border-radius: 2mm;
+  background: var(--sec); color: var(--sec-texto);
+}
+.pdf-grade + .pdf-secao { margin-top: 6mm; }
+.pdf-secao h2 { margin: 0; font-size: 12.5pt; line-height: 1.2; }
+.pdf-secao h2 small { font-size: .7em; font-weight: 500; opacity: .85; }
+.pdf-secao span { flex: none; font-size: 8pt; font-weight: 600; opacity: .9; }
+
+/* Produtos */
+.pdf-grade { display: grid; gap: 4mm; }
+.pdf-card {
+  display: flex; flex-direction: column; overflow: hidden; background: #fff;
+  border: .3mm solid #e2e8f0; border-top: 1.2mm solid var(--tema); border-radius: 2.5mm;
+}
+.pdf-card-foto { position: relative; flex: none; height: 40mm; padding: 2.5mm; display: grid; grid-template: minmax(0, 1fr) / minmax(0, 1fr); place-items: center; overflow: hidden; background: #fff; }
+.pdf-foto { width: 100%; height: 100%; min-height: 0; object-fit: contain; }
+.pdf-card-foto .sem-imagem { border-radius: 1.5mm; font-size: 16pt; }
+.esgotado .pdf-foto { opacity: .5; }
+.pdf-selo-esgotado {
+  position: absolute; top: 2mm; left: 2mm; padding: .5mm 2mm; border-radius: 99px;
+  background: #b91c1c; color: #fff; font-size: 6.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
+}
+.pdf-card-info { flex: 1; display: flex; flex-direction: column; gap: 1mm; padding: 2.5mm 3mm 3mm; border-top: .3mm solid #f1f5f9; }
+.pdf-etiquetas { display: flex; flex-wrap: wrap; align-items: center; gap: 1mm 2mm; }
+.pdf-tema { display: inline-block; padding: .4mm 2mm; border-radius: 99px; font-size: 7pt; font-weight: 700; line-height: 1.4; }
+.pdf-categoria { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #64748b; }
+.pdf-nome, .pdf-desc { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
+.pdf-nome { font-size: 9.5pt; line-height: 1.25; -webkit-line-clamp: 2; line-clamp: 2; }
+.pdf-conteudo { font-size: 8pt; color: #475569; }
+.pdf-desc { margin: 0; font-size: 7.8pt; line-height: 1.35; color: #475569; -webkit-line-clamp: 4; line-clamp: 4; }
+.pdf-ean { font-family: var(--mono); font-size: 7pt; color: #64748b; }
+.pdf-preco { margin-top: auto; padding-top: 1mm; font-size: 13pt; font-weight: 800; color: var(--marca-tinta-claro); font-variant-numeric: tabular-nums; }
+.esgotado .pdf-preco { color: #94a3b8; }
+
+/* Modelo "Detalhado": 2 por linha, foto ao lado */
+.layout-detalhado .pdf-grade { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.layout-detalhado .pdf-card { flex-direction: row; border-top-width: .3mm; border-left: 1.2mm solid var(--tema); }
+.layout-detalhado .pdf-card-foto { width: 36mm; height: auto; min-height: 42mm; }
+.layout-detalhado .pdf-card-info { border-top: 0; border-left: .3mm solid #f1f5f9; min-width: 0; }
+
+/* Modelo "Vitrine": 3 por linha */
+.layout-grade .pdf-grade { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+
+/* Modelo "Lista de preços": 1 por linha */
+.layout-lista .pdf-grade { grid-template-columns: minmax(0, 1fr); gap: 0; }
+.layout-lista .pdf-card {
+  flex-direction: row; align-items: center; gap: 3mm; padding: 1.8mm 0 1.8mm 2.5mm;
+  border: 0; border-left: 1.2mm solid var(--tema); border-bottom: .3mm solid #e2e8f0; border-radius: 0;
+}
+.layout-lista .pdf-card-foto { width: 16mm; height: 16mm; padding: 0; }
+.layout-lista .pdf-card-foto .sem-imagem { font-size: 8pt; }
+.layout-lista .pdf-selo-esgotado { top: auto; bottom: -.5mm; left: 50%; transform: translateX(-50%); padding: .2mm 1.2mm; font-size: 5pt; }
+.layout-lista .pdf-card-info {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 5mm; row-gap: .6mm;
+  align-items: center; padding: 0 2mm 0 0; border: 0; min-width: 0;
+}
+.layout-lista .pdf-card-info > * { grid-column: 1; }
+.layout-lista .pdf-preco { grid-column: 2; grid-row: 1 / span 6; margin: 0; padding: 0; font-size: 12pt; }
+.layout-lista .pdf-nome { -webkit-line-clamp: 1; line-clamp: 1; }
+.layout-lista .pdf-desc { -webkit-line-clamp: 1; line-clamp: 1; }
+
+/* ---------- Capa ---------- */
+.capa-topo {
+  position: relative; overflow: hidden; display: grid; justify-items: start; gap: 3mm;
+  padding: 22mm 18mm 14mm; background: var(--marca); color: var(--marca-contraste);
+}
+.capa-topo::before, .capa-topo::after {
+  content: ""; position: absolute; border-radius: 50%; background: currentColor; opacity: .07; pointer-events: none;
+}
+.capa-topo::before { width: 130mm; height: 130mm; right: -45mm; top: -60mm; }
+.capa-topo::after { width: 70mm; height: 70mm; right: 30mm; bottom: -45mm; }
+.capa-logo { position: relative; padding: 3mm; border-radius: 6mm; background: #fff; box-shadow: 0 2mm 6mm rgb(0 0 0 / .15); }
+.capa-logo-img { width: 30mm; height: 30mm; border-radius: 4mm; font-size: 22pt; }
+.capa-nome { position: relative; margin: 4mm 0 0; max-width: 165mm; font-size: 30pt; line-height: 1.05; font-weight: 800; letter-spacing: -.01em; }
+.capa-slogan { position: relative; margin: 0; max-width: 150mm; font-size: 12.5pt; opacity: .9; }
+.capa-titulo { position: relative; display: grid; gap: .8mm; margin-top: 7mm; padding-left: 4mm; border-left: 1.2mm solid currentColor; }
+.capa-titulo strong { font-size: 16pt; line-height: 1.2; }
+.capa-titulo span { font-size: 10pt; opacity: .85; }
+.capa-faixa { flex: none; display: flex; height: 3mm; }
+.capa-faixa span { flex: 1; }
+
+.capa-corpo { flex: 1; min-height: 0; overflow: hidden; display: grid; grid-template-columns: 1fr 1fr; gap: 12mm; padding: 12mm 18mm 4mm; align-content: start; }
+.capa-bloco h2, .capa-temas h2 { margin: 0 0 4mm; font-size: 8pt; text-transform: uppercase; letter-spacing: .1em; color: var(--marca-tinta-claro); }
+.capa-sumario { list-style: none; margin: 0; padding: 0; display: grid; gap: 2.6mm; }
+.capa-sumario li { display: flex; align-items: baseline; gap: 2.2mm; font-size: 10.5pt; }
+.capa-ponto { flex: none; width: 2.8mm; height: 2.8mm; border-radius: 50%; background: var(--c); align-self: center; }
+.capa-sec { font-weight: 700; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.capa-qtd { flex: none; padding: 0 1.6mm; border-radius: 99px; background: #f1f5f9; color: #475569; font-size: 7.5pt; font-weight: 700; }
+.capa-pontilhado { flex: 1; min-width: 4mm; border-bottom: .35mm dotted #cbd5e1; }
+.capa-pag { flex: none; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--marca-tinta-claro); }
+.capa-mais { color: #64748b; font-size: 9pt; }
+.capa-redes { list-style: none; margin: 0; padding: 0; display: grid; gap: 3mm; }
+.capa-redes a { display: flex; align-items: center; gap: 3mm; color: #0f172a; min-width: 0; }
+.capa-redes a > span:last-child { min-width: 0; }
+.capa-rede-icone { flex: none; width: 9mm; height: 9mm; border-radius: 2.5mm; display: grid; place-items: center; background: var(--marca); color: var(--marca-contraste); }
+.capa-rede-icone svg { width: 5mm; height: 5mm; }
+.capa-redes small { display: block; font-size: 7.5pt; color: #64748b; line-height: 1.2; }
+.capa-redes strong { display: block; font-size: 10.5pt; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.capa-dica { margin: 5mm 0 0; padding: 3mm 3.5mm; border-radius: 2mm; font-size: 8.5pt; color: #334155; background: color-mix(in srgb, var(--marca) 9%, #fff); }
+.capa-temas { margin-top: 9mm; }
+.capa-temas div { display: flex; flex-wrap: wrap; gap: 2mm; }
+.capa-temas .pdf-tema { padding: 1mm 3.5mm; font-size: 9pt; }
+.capa-aviso { flex: none; margin: 0 18mm; padding: 4mm 0 8mm; border-top: .3mm solid #e2e8f0; font-size: 7.5pt; color: #94a3b8; }
+
+/* ---------- Responsivo (pré-visualização) ---------- */
+@media (max-width: 960px) {
+  .pdf-editor { grid-template-columns: minmax(0, 1fr); }
+  .pdf-opcoes { position: static; max-height: none; overflow: visible; }
+}
+@media (max-width: 420px) {
+  .pdf-layouts { grid-template-columns: 1fr; }
+  .pdf-layout { grid-template-columns: 64px 1fr; column-gap: .6rem; }
+  .pdf-desenho { grid-row: span 2; margin: 0; height: 40px; }
+}
+
+/* ---------- Impressão: só as folhas, em A4 e sem margens do navegador ---------- */
+@media print {
+  @page { size: A4; margin: 0; }
+  html:has(.pdf-folhas), body:has(.pdf-folhas) { background: #fff !important; }
+  body:has(.pdf-folhas) > :not(.painel) { display: none !important; }
+  body:has(.pdf-folhas) .painel { display: block; min-height: 0; }
+  body:has(.pdf-folhas) :is(.menu, .menu-mobile, .veu, .cabecalho, .pdf-opcoes, .pdf-resumo) { display: none !important; }
+  body:has(.pdf-folhas) .area { padding: 0; max-width: none; }
+  body:has(.pdf-folhas) .pdf-editor, body:has(.pdf-folhas) .pdf-previa { display: block; }
+  .pdf-palco { height: auto !important; overflow: visible; }
+  .pdf-folhas { display: block; transform: none !important; margin: 0; }
+  .folha { box-shadow: none; break-after: page; }
+  .folha:last-child { break-after: auto; }
+}

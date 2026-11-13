@@ -54,7 +54,7 @@ WebProductsV/
 ├── public/                    ← o que a Vercel publica
 │   ├── index.html             Catálogo (layout "vitrine com barra lateral")
 │   ├── admin/index.html       Painel
-│   ├── css/  base.css · catalogo.css · admin.css
+│   ├── css/  base.css · catalogo.css · admin.css · pdf.css
 │   ├── js/
 │   │   ├── config.js          URL + chave pública do Supabase
 │   │   ├── supabase.js        Auth, REST e Storage via fetch
@@ -65,6 +65,7 @@ WebProductsV/
 │   │   ├── admin-produtos.js  Tabela + formulário CRUD (upload/URL de imagem)
 │   │   ├── admin-organizacao.js  Categorias e temas (ordem, cor, renomear, excluir)
 │   │   ├── admin-aparencia.js Nome, slogan, logo, cor, redes — com prévia ao vivo
+│   │   ├── admin-pdf.js       Catálogo em PDF: folhas A4 com capa, índice e paginação
 │   │   └── admin-ui.js        Modal, confirmação, R$ ↔ centavos, GTIN, redimensionar imagem
 │   └── img/icone.svg
 ├── supabase/
@@ -89,3 +90,17 @@ WebProductsV/
   se estiver esgotado), com o nome, o preço e o link do produto na mensagem.
 - Imagens são reduzidas no navegador (máx. 1200 px, WebP) antes de ir para o Storage; ao trocar ou
   excluir, a imagem antiga é apagada do bucket.
+
+## Catálogo em PDF (painel)
+
+- Tela **Catálogo em PDF** monta folhas A4 em HTML com a identidade da loja: capa na cor da marca
+  (logo, nome, slogan, índice com páginas, contatos e temas), faixa com as cores dos temas, cabeçalho
+  e rodapé com redes sociais e número da página em todas as folhas.
+- Três modelos: **Vitrine** (3 por linha), **Detalhado** (2 por linha, com descrição) e **Lista de preços**.
+  Agrupa por categoria ou tema (a seção usa a cor do tema), ordena e filtra por categoria/tema.
+- A paginação é feita no navegador: cada produto é colocado na folha e, se não couber, vai para a
+  próxima (com "continuação" no título da seção). A prévia é a própria folha reduzida.
+- **Baixar PDF** espera as imagens carregarem e chama `window.print()`; o CSS de impressão
+  (`@page A4, margem 0`) deixa só as folhas. No diálogo, o usuário escolhe "Salvar como PDF".
+  Texto continua selecionável e cada produto é um link para `/?produto=ID` no catálogo online.
+- As opções ficam salvas no navegador (`localStorage` `wpv_pdf_opcoes`).

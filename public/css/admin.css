@@ -42,6 +42,7 @@
 .cabecalho { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.25rem; }
 .cabecalho h1 { margin: 0; font-size: 1.5rem; }
 .cabecalho p { margin: .15rem 0 0; color: var(--texto-2); font-size: .9rem; }
+.cabecalho-acoes { display: flex; gap: .5rem; flex-wrap: wrap; }
 
 /* ---------- Indicadores ---------- */
 .indicadores { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .8rem; margin-bottom: 1.25rem; }
