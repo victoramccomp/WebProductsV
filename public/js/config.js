@@ -5,8 +5,8 @@
 // Essas duas informações são públicas por natureza (vão para o navegador).
 // NUNCA coloque aqui a "Secret key" / "service_role".
 export const CONFIG = {
-  supabaseUrl: 'https://SEU-PROJETO.supabase.co',
-  supabaseKey: 'SUA_CHAVE_PUBLICA',
+  supabaseUrl: 'https://uwknunenocqrdemtljfg.supabase.co',
+  supabaseKey: 'sb_publishable_HydWwjCnkVq11fboAfCO2Q_wYxrjlGQ',
 };
 
 // Para testar com o Supabase local (npx supabase start), abra o site com ?local=1 uma vez.
