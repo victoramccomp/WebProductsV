@@ -7,7 +7,7 @@ export const IDIOMA_PADRAO = 'pt-BR';
 
 export const IDIOMAS = [
   { codigo: 'ja', nome: 'Japonês', curto: 'Japonês', sigla: 'JP', bandeira: 'jp' },
-  { codigo: 'en', nome: 'Inglês', curto: 'Inglês', sigla: 'EN', bandeira: 'gb' },
+  { codigo: 'en', nome: 'Inglês (EUA)', curto: 'Inglês', sigla: 'EN', bandeira: 'us' },
   { codigo: 'de', nome: 'Alemão', curto: 'Alemão', sigla: 'DE', bandeira: 'de' },
   { codigo: 'fr', nome: 'Francês', curto: 'Francês', sigla: 'FR', bandeira: 'fr' },
   { codigo: 'it', nome: 'Italiano', curto: 'Italiano', sigla: 'IT', bandeira: 'it' },
@@ -38,16 +38,20 @@ function estrela(cx, cy, r, pontas = 5, interno = 0.382) {
 const faixasH = (...cores) => cores.map((c, i) => `<rect y="${(20 / cores.length) * i}" width="30" height="${20 / cores.length + 0.01}" fill="${c}"/>`).join('');
 const faixasV = (...cores) => cores.map((c, i) => `<rect x="${(30 / cores.length) * i}" width="${30 / cores.length + 0.01}" height="20" fill="${c}"/>`).join('');
 const trigrama = (x) => [0, 1, 2].map((n) => `<rect x="${x + n}" y="8" width=".6" height="4"/>`).join('');
+// EUA: 13 listras e 50 estrelas (9 fileiras alternando 6 e 5) no cantão azul.
+const listrasEua = Array.from({ length: 6 }, (_, i) => `<rect y="${((2 * i + 1) * 20) / 13}" width="30" height="${20 / 13}"/>`).join('');
+const estrelasEua = Array.from({ length: 9 }, (_, linha) => {
+  const y = (1.077 * (linha + 1)).toFixed(2);
+  const xs = linha % 2 ? [2, 4, 6, 8, 10] : [1, 3, 5, 7, 9, 11];
+  return xs.map((x) => `<circle cx="${x}" cy="${y}" r=".38"/>`).join('');
+}).join('');
 const petalas = (cx, cy) => [0, 72, 144, 216, 288]
   .map((g) => `<ellipse cx="${cx}" cy="${cy - 1.7}" rx="1" ry="1.9" transform="rotate(${g} ${cx} ${cy})"/>`).join('');
 
 const DESENHOS = {
   jp: '<rect width="30" height="20" fill="#fff"/><circle cx="15" cy="10" r="6" fill="#bc002d"/>',
-  gb: `<rect width="30" height="20" fill="#012169"/>
-    <path d="M0,0 30,20M30,0 0,20" stroke="#fff" stroke-width="4"/>
-    <path d="M0,0 30,20M30,0 0,20" stroke="#c8102e" stroke-width="1.4"/>
-    <path d="M15,0V20M0,10H30" stroke="#fff" stroke-width="6"/>
-    <path d="M15,0V20M0,10H30" stroke="#c8102e" stroke-width="3.4"/>`,
+  us: `<rect width="30" height="20" fill="#b22234"/><g fill="#fff">${listrasEua}</g>
+    <rect width="12" height="10.77" fill="#3c3b6e"/><g fill="#fff">${estrelasEua}</g>`,
   de: faixasH('#000', '#dd0000', '#ffce00'),
   fr: faixasV('#0055a4', '#fff', '#ef4135'),
   it: faixasV('#009246', '#fff', '#ce2b37'),
