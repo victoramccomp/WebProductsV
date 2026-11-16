@@ -4,6 +4,7 @@
 import { rest } from './supabase.js';
 import { armazenamento, debounce, esc, formatarReais, icone, imagemProduto, mascararTelefone } from './util.js';
 import { LOJA_PADRAO, aplicarCores, contraste, logoHtml, redesDaLoja } from './loja.js';
+import { seloIdioma } from './idiomas.js';
 
 const CHAVE_OPCOES = 'wpv_pdf_opcoes';
 const OPCOES_PADRAO = {
@@ -57,7 +58,7 @@ export async function vistaPdf(v) {
     rest('loja?select=*&id=eq.1', { admin: true }),
     rest('categorias?select=id,nome,ordem&order=ordem,nome', { admin: true }),
     rest('temas?select=id,nome,cor,ordem&order=ordem,nome', { admin: true }),
-    rest('produtos?select=id,nome,descricao,conteudo,codigo_barras,preco_centavos,estoque,categoria_id,tema_id,imagem,criado_em&ativo=eq.true', { admin: true }),
+    rest('produtos?select=*&ativo=eq.true', { admin: true }),
   ]);
   const loja = { ...LOJA_PADRAO, ...lojas[0] };
   const salvas = armazenamento.ler(CHAVE_OPCOES, {});
@@ -205,6 +206,7 @@ export async function vistaPdf(v) {
     const esgotado = p.estoque <= 0;
     const etiquetas = [
       tema && o.agrupar !== 'tema' ? `<span class="pdf-tema" style="background:${esc(cor)};color:${textoSobre(cor)}">${esc(tema.nome)}</span>` : '',
+      seloIdioma(p.idioma, 'selo-idioma pdf-idioma'),
       o.agrupar !== 'categoria' ? `<span class="pdf-categoria">${esc(catPorId.get(p.categoria_id)?.nome || '')}</span>` : '',
     ].join('');
     return `

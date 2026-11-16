@@ -118,6 +118,23 @@ dialog.modal-pequeno { width: min(420px, calc(100% - 32px)); }
 .interruptor input { width: 18px; height: 18px; accent-color: var(--primaria); }
 .modal-rodape .esquerda { margin-right: auto; }
 
+/* Idioma do produto: opções com bandeira */
+.campo-idioma { border: 0; margin: 0; padding: 0; min-width: 0; }
+.campo-idioma legend { padding: 0; margin-bottom: .3rem; }
+.idiomas-opcoes { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: .35rem; }
+.idioma-opcao {
+  position: relative; display: flex; align-items: center; gap: .45rem; min-width: 0; cursor: pointer;
+  padding: .4rem .55rem; border: 1px solid var(--borda-forte); border-radius: var(--raio-sm);
+  font-size: .84rem; font-weight: 500; background: var(--superficie);
+}
+.idioma-opcao span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.idioma-opcao input { position: absolute; opacity: 0; pointer-events: none; }
+.idioma-opcao:hover { background: var(--superficie-2); }
+.idioma-opcao:has(input:checked) { border-color: var(--texto); box-shadow: 0 0 0 1px var(--texto); font-weight: 700; background: var(--superficie-2); }
+.idioma-opcao:has(input:focus-visible) { outline: 2px solid var(--foco); outline-offset: 2px; }
+.idioma-opcao .bandeira { font-size: 1.05rem; }
+.tabela .linha-idioma { display: flex; align-items: center; gap: .4rem; flex-wrap: wrap; }
+
 /* ---------- Categorias e temas ---------- */
 .ponto-tema { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--cor); margin-right: .35rem; vertical-align: 1px; }
 .organizacao { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; align-items: start; }

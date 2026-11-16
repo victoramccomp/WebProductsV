@@ -29,7 +29,7 @@ admins (user_id → auth.users)
 |---|---|---|
 | `categorias` | `id`, `nome` (único), `ordem` | Tipo do produto (Blister, Box, ETB…). `ordem` = ordem na barra lateral. |
 | `temas` | `id`, `nome` (único), `cor` (`#rrggbb`), `ordem` | Assunto do produto (Pokémon, Digimon…). A cor aparece no catálogo. |
-| `produtos` | `id`, `nome`, `descricao`, `conteudo`, `codigo_barras` (único, 8–14 dígitos), `preco_centavos`, `estoque`, `categoria_id` (obrigatório), `tema_id` (opcional), `imagem` (URL), `ativo`, `criado_em`, `atualizado_em` | Preço em **centavos** (inteiro). `ativo = false` esconde do catálogo. |
+| `produtos` | `id`, `nome`, `descricao`, `conteudo`, `codigo_barras` (único, 8–14 dígitos), `preco_centavos`, `estoque`, `categoria_id` (obrigatório), `tema_id` (opcional), `imagem` (URL), `idioma`, `ativo`, `criado_em`, `atualizado_em` | Preço em **centavos** (inteiro). `ativo = false` esconde do catálogo. `idioma` = código (`ja`, `en`, `pt-BR`, `es-419`, `zh-Hant`…; padrão `pt-BR`). |
 | `loja` | `nome`, `slogan`, `logo_url`, `cor_primaria`, `instagram`, `whatsapp` (só dígitos, com DDI), `facebook`, `tiktok` | Uma única linha (`id = 1`). |
 | `admins` | `user_id` | Quem pode gravar. Conta no Auth sem linha aqui não grava nada. |
 
@@ -60,6 +60,7 @@ WebProductsV/
 │   │   ├── supabase.js        Auth, REST e Storage via fetch
 │   │   ├── loja.js            Cor da marca (contraste automático), logo, redes sociais
 │   │   ├── util.js            Formatação, ícones, avisos, busca sem acento
+│   │   ├── idiomas.js         Idiomas dos produtos + bandeiras em SVG (emoji de bandeira não aparece no Windows)
 │   │   ├── catalogo.js        Filtros (categoria + vários temas), busca, ordenação, detalhes, WhatsApp
 │   │   ├── admin.js           Login, rotas do painel, Minha conta
 │   │   ├── admin-produtos.js  Tabela + formulário CRUD (upload/URL de imagem)
@@ -71,6 +72,7 @@ WebProductsV/
 ├── supabase/
 │   ├── schema.sql             Tabelas, RLS, bucket e políticas (rode no SQL Editor)
 │   ├── dados-iniciais.sql     Dados migrados da versão anterior
+│   ├── atualizacoes/          SQL de cada mudança no banco (rodar uma vez no SQL Editor)
 │   └── config.toml            Só para o Supabase local (npx supabase start)
 ├── docs/
 │   ├── ARQUITETURA.md

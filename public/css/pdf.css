@@ -106,6 +106,8 @@
 .pdf-card-info { flex: 1; display: flex; flex-direction: column; gap: 1mm; padding: 2.5mm 3mm 3mm; border-top: .3mm solid #f1f5f9; }
 .pdf-etiquetas { display: flex; flex-wrap: wrap; align-items: center; gap: 1mm 2mm; }
 .pdf-tema { display: inline-block; padding: .4mm 2mm; border-radius: 99px; font-size: 7pt; font-weight: 700; line-height: 1.4; }
+.pdf-idioma { padding: .2mm 1.6mm; gap: 1mm; border-color: #e2e8f0; background: #fff; color: #0f172a; font-size: 6.5pt; }
+.pdf-idioma .bandeira { box-shadow: 0 0 0 .2mm rgb(15 23 42 / .2); }
 .pdf-categoria { font-size: 6.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #64748b; }
 .pdf-nome, .pdf-desc { display: -webkit-box; -webkit-box-orient: vertical; overflow: hidden; }
 .pdf-nome { font-size: 9.5pt; line-height: 1.25; -webkit-line-clamp: 2; line-clamp: 2; }

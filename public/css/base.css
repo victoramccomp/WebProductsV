@@ -197,6 +197,15 @@ dialog.modal::backdrop { background: rgb(15 23 42 / .5); }
   font-weight: 700; letter-spacing: .02em;
 }
 
+/* ---------- Idioma (bandeira desenhada em SVG) ---------- */
+.bandeira { width: 1.35em; height: .9em; flex: none; border-radius: 2px; overflow: hidden; box-shadow: 0 0 0 1px rgb(15 23 42 / .14); vertical-align: -.1em; }
+.selo-idioma {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .1rem .45rem; border-radius: 999px; border: 1px solid var(--borda);
+  background: var(--superficie); color: var(--texto);
+  font-size: .7rem; font-weight: 700; letter-spacing: .02em; line-height: 1.5; white-space: nowrap;
+}
+
 /* ---------- Logo da loja ---------- */
 .logo { width: 42px; height: 42px; border-radius: 11px; object-fit: contain; flex: none; }
 .logo-monograma {

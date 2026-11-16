@@ -4,11 +4,12 @@ import { avisar, debounce, esc, formatarReais, icone, imagemProduto, semAcento }
 import {
   abrirModal, centavosParaTexto, confirmar, fecharModal, gtinValido, reaisParaCentavos, redimensionarImagem,
 } from './admin-ui.js';
+import { IDIOMAS, IDIOMA_PADRAO, bandeira, idiomaDe, seloIdioma } from './idiomas.js';
 
 let produtos = [];
 let categorias = [];
 let temas = [];
-const filtro = { busca: '', categoria: '', tema: '', ordem: 'nome', direcao: 1 };
+const filtro = { busca: '', categoria: '', tema: '', idioma: '', ordem: 'nome', direcao: 1 };
 
 const COLUNAS = [
   { chave: 'nome', titulo: 'Produto' },
@@ -39,6 +40,7 @@ export async function vistaProdutos(vista) {
       </label>
       <label><span class="sr-only">Filtrar por categoria</span><select class="select" id="filtro-categoria"></select></label>
       <label><span class="sr-only">Filtrar por tema</span><select class="select" id="filtro-tema"></select></label>
+      <label><span class="sr-only">Filtrar por idioma</span><select class="select" id="filtro-idioma"></select></label>
     </div>
     <div class="tabela-caixa"><div class="carregando">Carregando…</div></div>`;
 
@@ -46,6 +48,7 @@ export async function vistaProdutos(vista) {
   vista.querySelector('#busca-produtos').addEventListener('input', debounce((e) => { filtro.busca = e.target.value; renderizarTabela(vista); }, 150));
   vista.querySelector('#filtro-categoria').addEventListener('change', (e) => { filtro.categoria = e.target.value; renderizarTabela(vista); });
   vista.querySelector('#filtro-tema').addEventListener('change', (e) => { filtro.tema = e.target.value; renderizarTabela(vista); });
+  vista.querySelector('#filtro-idioma').addEventListener('change', (e) => { filtro.idioma = e.target.value; renderizarTabela(vista); });
 
   vista.querySelector('.tabela-caixa').addEventListener('click', (e) => {
     const ordenar = e.target.closest('[data-ordenar]');
@@ -72,7 +75,9 @@ export async function vistaProdutos(vista) {
     temas = tms;
     const nomeCat = new Map(cats.map((c) => [c.id, c.nome]));
     const tema = new Map(tms.map((t) => [t.id, t]));
-    produtos = lista.map((p) => ({ ...p, categoria: nomeCat.get(p.categoria_id) || '', tema: tema.get(p.tema_id) || null }));
+    produtos = lista.map((p) => ({
+      ...p, idioma: idiomaDe(p.idioma).codigo, categoria: nomeCat.get(p.categoria_id) || '', tema: tema.get(p.tema_id) || null,
+    }));
     renderizarIndicadores(vista);
     renderizarFiltros(vista);
     renderizarTabela(vista);
@@ -95,6 +100,11 @@ function renderizarFiltros(vista) {
     `<option value="${c.id}" ${String(c.id) === filtro.categoria ? 'selected' : ''}>${esc(c.nome)}</option>`).join('')}`;
   vista.querySelector('#filtro-tema').innerHTML = `<option value="">Todos os temas</option><option value="sem" ${filtro.tema === 'sem' ? 'selected' : ''}>Sem tema</option>${temas.map((t) =>
     `<option value="${t.id}" ${String(t.id) === filtro.tema ? 'selected' : ''}>${esc(t.nome)}</option>`).join('')}`;
+  // Só os idiomas que têm produto cadastrado.
+  const usados = IDIOMAS.filter((i) => produtos.some((p) => p.idioma === i.codigo));
+  if (filtro.idioma && !usados.some((i) => i.codigo === filtro.idioma)) filtro.idioma = '';
+  vista.querySelector('#filtro-idioma').innerHTML = `<option value="">Todos os idiomas</option>${usados.map((i) =>
+    `<option value="${i.codigo}" ${i.codigo === filtro.idioma ? 'selected' : ''}>${esc(i.nome)}</option>`).join('')}`;
 }
 
 function renderizarTabela(vista) {
@@ -102,8 +112,9 @@ function renderizarTabela(vista) {
   const lista = produtos
     .filter((p) => !filtro.categoria || String(p.categoria_id) === filtro.categoria)
     .filter((p) => !filtro.tema || (filtro.tema === 'sem' ? !p.tema_id : String(p.tema_id) === filtro.tema))
+    .filter((p) => !filtro.idioma || p.idioma === filtro.idioma)
     .filter((p) => {
-      const alvo = semAcento(`${p.nome} ${p.descricao} ${p.conteudo} ${p.codigo_barras || ''}`);
+      const alvo = semAcento(`${p.nome} ${p.descricao} ${p.conteudo} ${p.codigo_barras || ''} ${idiomaDe(p.idioma).nome}`);
       return termos.every((t) => alvo.includes(t));
     })
     .sort((a, b) => {
@@ -134,7 +145,8 @@ function renderizarTabela(vista) {
         ${lista.map((p) => `
           <tr class="clicavel${p.ativo ? '' : ' inativo'}" data-id="${p.id}">
             <td><div class="miniatura">${imagemProduto(p)}</div></td>
-            <td><strong>${esc(p.nome)}</strong>${p.ativo ? '' : ' <span class="selo">Oculto</span>'}<span class="sub">${esc(p.conteudo)}</span></td>
+            <td><strong>${esc(p.nome)}</strong>${p.ativo ? '' : ' <span class="selo">Oculto</span>'}
+              <span class="sub linha-idioma">${seloIdioma(p.idioma)}${esc(p.conteudo)}</span></td>
             <td class="mono">${esc(p.codigo_barras || '—')}</td>
             <td>${esc(p.categoria)}<span class="sub">${p.tema ? `<span class="ponto-tema" style="--cor:${esc(p.tema.cor)}"></span>${esc(p.tema.nome)}` : 'Sem tema'}</span></td>
             <td class="num">${formatarReais(p.preco_centavos)}</td>
@@ -172,6 +184,7 @@ function abrirFormulario(produto, depois) {
   const p = produto || {
     nome: '', descricao: '', conteudo: '', codigo_barras: '', preco_centavos: 0, estoque: 0,
     categoria_id: categorias.length === 1 ? categorias[0].id : '', tema_id: '', imagem: '', ativo: true,
+    idioma: IDIOMA_PADRAO,
   };
   // imagem: '' | URL já salva | { blob, previa } (arquivo novo, enviado só ao salvar)
   let imagem = p.imagem || '';
@@ -239,6 +252,16 @@ function abrirFormulario(produto, depois) {
               <button class="btn btn-primario" type="button">Criar</button>
             </div>
           </div>
+          <fieldset class="campo largo campo-idioma">
+            <legend class="rotulo obrigatorio">Idioma</legend>
+            <div class="idiomas-opcoes">
+              ${IDIOMAS.map((i) => `
+                <label class="idioma-opcao" title="${esc(i.nome)}">
+                  <input type="radio" name="idioma" value="${i.codigo}" ${i.codigo === idiomaDe(p.idioma).codigo ? 'checked' : ''}>
+                  ${bandeira(i.codigo)}<span>${esc(i.curto)}</span>
+                </label>`).join('')}
+            </div>
+          </fieldset>
           <label class="interruptor largo">
             <input type="checkbox" name="ativo" ${p.ativo ? 'checked' : ''}> Visível no catálogo
           </label>
@@ -390,7 +413,7 @@ function abrirFormulario(produto, depois) {
         nome: form.nome.value.trim(), descricao: form.descricao.value.trim(), conteudo: form.conteudo.value.trim(),
         codigo_barras: form.codigo_barras.value || null, preco_centavos: preco, estoque,
         categoria_id: Number(form.categoria_id.value), tema_id: Number(form.tema_id.value) || null,
-        imagem: enviada || url, ativo: form.ativo.checked,
+        imagem: enviada || url, ativo: form.ativo.checked, idioma: form.idioma.value || IDIOMA_PADRAO,
       };
       await rest(editando ? `produtos?id=eq.${produto.id}` : 'produtos', {
         metodo: editando ? 'PATCH' : 'POST', corpo: dados, admin: true, prefer: 'return=minimal',

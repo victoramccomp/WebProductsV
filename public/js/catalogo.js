@@ -4,6 +4,7 @@ import {
   armazenamento, debounce, esc, formatarReais, icone, imagemProduto, semAcento, slugify,
 } from './util.js';
 import { LOJA_PADRAO, aplicarCores, linkWhatsApp, logoHtml, redesHtml } from './loja.js';
+import { bandeira, idiomaDe, seloIdioma } from './idiomas.js';
 
 const $ = (id) => document.getElementById(id);
 const CACHE_LOJA = `wpv_loja:${URL_BASE}`; // evita "piscar" a cor padrão antes de carregar a da loja
@@ -51,7 +52,7 @@ async function iniciar() {
       rest('loja?select=*&id=eq.1'),
       rest('categorias?select=id,nome,ordem&order=ordem,nome'),
       rest('temas?select=id,nome,cor,ordem&order=ordem,nome'),
-      rest('produtos?select=id,nome,descricao,conteudo,codigo_barras,preco_centavos,estoque,imagem,categoria_id,tema_id,criado_em&ativo=is.true&order=nome'),
+      rest('produtos?select=*&ativo=is.true&order=nome'),
     ]);
     if (linhasLoja[0]) {
       loja = { ...LOJA_PADRAO, ...linhasLoja[0] };
@@ -65,9 +66,10 @@ async function iniciar() {
     produtos = prods.map((p) => {
       const categoria = porCategoria.get(p.categoria_id);
       const tema = porTema.get(p.tema_id) || null;
+      const idioma = idiomaDe(p.idioma);
       return {
-        ...p, categoria, tema,
-        busca: semAcento(`${p.nome} ${p.descricao} ${p.conteudo} ${p.codigo_barras || ''} ${categoria?.nome || ''} ${tema?.nome || ''}`),
+        ...p, categoria, tema, idioma: idioma.codigo,
+        busca: semAcento(`${p.nome} ${p.descricao} ${p.conteudo} ${p.codigo_barras || ''} ${categoria?.nome || ''} ${tema?.nome || ''} ${idioma.nome}`),
       };
     });
   } catch (erro) {
@@ -298,7 +300,7 @@ function renderizarGrade(lista) {
   }
   $('grade').innerHTML = lista.map((p) => `
     <article class="card${p.estoque <= 0 ? ' esgotado' : ''}">
-      <div class="card-imagem">${imagemProduto(p)}${etiquetaTema(p.tema)}</div>
+      <div class="card-imagem">${imagemProduto(p)}${etiquetaTema(p.tema)}${seloIdioma(p.idioma)}</div>
       <div class="card-corpo">
         <span class="card-categoria">${esc(p.categoria?.nome || '')}</span>
         <h3 class="card-nome"><a href="?produto=${p.id}" data-produto="${p.id}">${esc(p.nome)}</a></h3>
@@ -329,12 +331,13 @@ function abrirProduto(produto, { atualizarUrl = true } = {}) {
     <div class="modal-corpo">
       <div class="produto-imagem">${imagemProduto(produto)}</div>
       <div class="produto-info">
-        ${produto.tema ? `<div class="etiquetas">${etiquetaTema(produto.tema)}</div>` : ''}
+        <div class="etiquetas">${etiquetaTema(produto.tema)}${seloIdioma(produto.idioma)}</div>
         <h2 id="titulo-produto">${esc(produto.nome)}</h2>
         <div class="preco">${preco}</div>
         <div>${disponibilidade(produto.estoque)}</div>
         ${produto.descricao ? `<p class="descricao">${esc(produto.descricao)}</p>` : ''}
         <dl class="ficha">
+          <dt>Idioma</dt><dd class="ficha-idioma">${bandeira(produto.idioma)}${esc(idiomaDe(produto.idioma).nome)}</dd>
           ${produto.conteudo ? `<dt>Conteúdo</dt><dd>${esc(produto.conteudo)}</dd>` : ''}
           ${produto.codigo_barras ? `<dt>Código de barras</dt><dd class="mono">${esc(produto.codigo_barras)}</dd>` : ''}
           ${produto.estoque > 0 ? `<dt>Estoque</dt><dd>${produto.estoque} unidade(s)</dd>` : ''}

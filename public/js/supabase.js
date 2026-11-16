@@ -139,6 +139,7 @@ function traduzirErroRest(d, status) {
   if (codigo === '23514') return 'Algum valor está fora do permitido. Confira os campos.';
   if (codigo === '42501' || status === 403) return 'Sua conta não tem permissão para isso.';
   if (codigo === 'PGRST205' || codigo === '42P01') return 'Tabelas não encontradas. Rode o arquivo supabase/schema.sql no Supabase.';
+  if (codigo === 'PGRST204' || codigo === '42703') return 'O banco está desatualizado. Rode o supabase/schema.sql de novo no SQL Editor do Supabase.';
   return d?.message || `Erro inesperado (${status}).`;
 }
 

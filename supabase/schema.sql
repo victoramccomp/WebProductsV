@@ -32,12 +32,20 @@ create table if not exists public.produtos (
   categoria_id    bigint not null references public.categorias (id) on delete restrict,
   tema_id         bigint references public.temas (id) on delete set null,
   imagem          text not null default '' check (char_length(imagem) <= 1000),
+  idioma          text not null default 'pt-BR',
   ativo           boolean not null default true,
   criado_em       timestamptz not null default now(),
   atualizado_em   timestamptz not null default now()
 );
 create index if not exists produtos_categoria_idx on public.produtos (categoria_id);
 create index if not exists produtos_tema_idx on public.produtos (tema_id);
+
+-- Idioma do produto (atualização de 2026-11): bancos antigos ganham a coluna aqui.
+-- A lista precisa bater com public/js/idiomas.js.
+alter table public.produtos add column if not exists idioma text not null default 'pt-BR';
+alter table public.produtos drop constraint if exists produtos_idioma_check;
+alter table public.produtos add constraint produtos_idioma_check
+  check (idioma in ('ja', 'en', 'de', 'fr', 'it', 'pt-BR', 'es-ES', 'es-419', 'ko', 'zh-Hant', 'zh-Hans', 'th', 'id'));
 
 -- Uma única linha com a identidade visual e os contatos da loja.
 create table if not exists public.loja (

@@ -75,6 +75,18 @@ Abra `https://seu-site.vercel.app/admin/`, entre e:
 
 ---
 
+## Atualizações do banco
+
+Quando uma versão nova precisa mudar o banco, o SQL fica em `supabase/atualizacoes/`. Rode cada
+arquivo **uma vez** no SQL Editor do Supabase (rodar de novo não estraga nada). Rodar o
+`supabase/schema.sql` inteiro de novo também aplica todas as atualizações.
+
+| Arquivo | O que faz |
+|---|---|
+| `2026-11-16-idioma-dos-produtos.sql` | Campo **Idioma** do produto (produtos antigos ficam como Português BR) |
+
+---
+
 ## Rodando no computador
 
 ```bash
