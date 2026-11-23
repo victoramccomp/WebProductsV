@@ -86,7 +86,7 @@ export async function vistaProdutos(vista) {
 }
 
 function renderizarIndicadores(vista) {
-  const semEstoque = produtos.filter((p) => p.estoque === 0).length;
+  const semEstoque = produtos.filter((p) => p.estoque === 0 && !p.pre_venda).length;
   const ocultos = produtos.filter((p) => !p.ativo).length;
   vista.querySelector('#indicadores').innerHTML = `
     <div class="indicador"><span>Produtos</span><strong>${produtos.length}</strong></div>
@@ -145,12 +145,12 @@ function renderizarTabela(vista) {
         ${lista.map((p) => `
           <tr class="clicavel${p.ativo ? '' : ' inativo'}" data-id="${p.id}">
             <td><div class="miniatura">${imagemProduto(p)}</div></td>
-            <td><strong>${esc(p.nome)}</strong>${p.ativo ? '' : ' <span class="selo">Oculto</span>'}
+            <td><strong>${esc(p.nome)}</strong>${p.ativo ? '' : ' <span class="selo">Oculto</span>'}${p.pre_venda ? ' <span class="selo selo-info">Pré-venda</span>' : ''}
               <span class="sub linha-idioma">${seloIdioma(p.idioma)}${esc(p.conteudo)}</span></td>
             <td class="mono">${esc(p.codigo_barras || '—')}</td>
             <td>${esc(p.categoria)}<span class="sub">${p.tema ? `<span class="ponto-tema" style="--cor:${esc(p.tema.cor)}"></span>${esc(p.tema.nome)}` : 'Sem tema'}</span></td>
             <td class="num">${formatarReais(p.preco_centavos)}</td>
-            <td class="num ${p.estoque === 0 ? 'estoque-zero' : p.estoque <= 3 ? 'estoque-baixo' : ''}">${p.estoque}</td>
+            <td class="num ${p.pre_venda ? '' : p.estoque === 0 ? 'estoque-zero' : p.estoque <= 3 ? 'estoque-baixo' : ''}">${p.estoque}</td>
             <td class="acoes">
               <button class="btn btn-fantasma btn-icone" type="button" aria-label="Editar ${esc(p.nome)}">${icone('editar')}</button>
               <button class="btn btn-fantasma btn-icone btn-perigo" type="button" data-excluir aria-label="Excluir ${esc(p.nome)}">${icone('lixo')}</button>
@@ -184,7 +184,7 @@ function abrirFormulario(produto, depois) {
   const p = produto || {
     nome: '', descricao: '', conteudo: '', codigo_barras: '', preco_centavos: 0, estoque: 0,
     categoria_id: categorias.length === 1 ? categorias[0].id : '', tema_id: '', imagem: '', ativo: true,
-    idioma: IDIOMA_PADRAO,
+    idioma: IDIOMA_PADRAO, pre_venda: false,
   };
   // imagem: '' | URL já salva | { blob, previa } (arquivo novo, enviado só ao salvar)
   let imagem = p.imagem || '';
@@ -264,6 +264,10 @@ function abrirFormulario(produto, depois) {
           </fieldset>
           <label class="interruptor largo">
             <input type="checkbox" name="ativo" ${p.ativo ? 'checked' : ''}> Visível no catálogo
+          </label>
+          <label class="interruptor largo interruptor-com-dica">
+            <input type="checkbox" name="pre_venda" ${p.pre_venda ? 'checked' : ''}>
+            <span>Pré-venda<small>O catálogo mostra “Pré-venda” (mesmo sem estoque) e o botão vira “Reservar pelo WhatsApp”.</small></span>
           </label>
         </div>
       </form>`,
@@ -414,6 +418,7 @@ function abrirFormulario(produto, depois) {
         codigo_barras: form.codigo_barras.value || null, preco_centavos: preco, estoque,
         categoria_id: Number(form.categoria_id.value), tema_id: Number(form.tema_id.value) || null,
         imagem: enviada || url, ativo: form.ativo.checked, idioma: form.idioma.value || IDIOMA_PADRAO,
+        pre_venda: form.pre_venda.checked,
       };
       await rest(editando ? `produtos?id=eq.${produto.id}` : 'produtos', {
         metodo: editando ? 'PATCH' : 'POST', corpo: dados, admin: true, prefer: 'return=minimal',

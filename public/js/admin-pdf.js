@@ -175,7 +175,7 @@ export async function vistaPdf(v) {
     return produtos
       .filter((p) => !o.semCategorias.includes(p.categoria_id))
       .filter((p) => !o.semTemas.includes(p.tema_id ?? 0))
-      .filter((p) => o.esgotados || p.estoque > 0)
+      .filter((p) => o.esgotados || p.estoque > 0 || p.pre_venda)
       .sort(ORDENAR[o.ordem] || ORDENAR.nome);
   }
 
@@ -203,7 +203,7 @@ export async function vistaPdf(v) {
   function cardHtml(p, o) {
     const tema = p.tema_id ? temaDe(p) : null;
     const cor = tema?.cor || loja.cor_primaria;
-    const esgotado = p.estoque <= 0;
+    const esgotado = p.estoque <= 0 && !p.pre_venda;
     const etiquetas = [
       tema && o.agrupar !== 'tema' ? `<span class="pdf-tema" style="background:${esc(cor)};color:${textoSobre(cor)}">${esc(tema.nome)}</span>` : '',
       seloIdioma(p.idioma, 'selo-idioma pdf-idioma'),
@@ -214,6 +214,7 @@ export async function vistaPdf(v) {
         <div class="pdf-card-foto">
           ${imagemProduto(p, 'pdf-foto').replace(' loading="lazy"', '')}
           ${esgotado ? '<span class="pdf-selo-esgotado">Esgotado</span>' : ''}
+          ${p.pre_venda ? '<span class="pdf-selo-esgotado pdf-selo-pre-venda">Pré-venda</span>' : ''}
         </div>
         <div class="pdf-card-info">
           ${etiquetas ? `<div class="pdf-etiquetas">${etiquetas}</div>` : ''}

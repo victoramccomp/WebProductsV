@@ -69,7 +69,7 @@ async function iniciar() {
       const idioma = idiomaDe(p.idioma);
       return {
         ...p, categoria, tema, idioma: idioma.codigo,
-        busca: semAcento(`${p.nome} ${p.descricao} ${p.conteudo} ${p.codigo_barras || ''} ${categoria?.nome || ''} ${tema?.nome || ''} ${idioma.nome}`),
+        busca: semAcento(`${p.nome} ${p.descricao} ${p.conteudo} ${p.codigo_barras || ''} ${categoria?.nome || ''} ${tema?.nome || ''} ${idioma.nome}${p.pre_venda ? ' pre-venda prevenda' : ''}`),
       };
     });
   } catch (erro) {
@@ -203,7 +203,7 @@ function filtrar({ ignorar } = {}) {
 }
 
 const ORDENACOES = {
-  '': (a, b) => (b.estoque > 0) - (a.estoque > 0) || a.nome.localeCompare(b.nome, 'pt-BR'),
+  '': (a, b) => pedivel(b) - pedivel(a) || a.nome.localeCompare(b.nome, 'pt-BR'),
   recentes: (a, b) => b.criado_em.localeCompare(a.criado_em),
   nome: (a, b) => a.nome.localeCompare(b.nome, 'pt-BR'),
   menor_preco: (a, b) => a.preco_centavos - b.preco_centavos,
@@ -278,7 +278,11 @@ function renderizarBarra(n) {
   $('chips').innerHTML = chips.join('');
 }
 
-function disponibilidade(estoque) {
+/** Dá para pedir agora: tem estoque ou está em pré-venda. */
+function pedivel(p) { return p.pre_venda || p.estoque > 0; }
+
+function disponibilidade({ estoque, pre_venda: preVenda }) {
+  if (preVenda) return '<span class="estoque pre-venda">Pré-venda</span>';
   if (estoque <= 0) return '<span class="estoque zero">Esgotado</span>';
   if (estoque <= 3) return `<span class="estoque baixo">Últimas ${estoque} un.</span>`;
   return '<span class="estoque">Disponível</span>';
@@ -299,7 +303,7 @@ function renderizarGrade(lista) {
     return;
   }
   $('grade').innerHTML = lista.map((p) => `
-    <article class="card${p.estoque <= 0 ? ' esgotado' : ''}">
+    <article class="card${pedivel(p) ? '' : ' esgotado'}">
       <div class="card-imagem">${imagemProduto(p)}${etiquetaTema(p.tema)}${seloIdioma(p.idioma)}</div>
       <div class="card-corpo">
         <span class="card-categoria">${esc(p.categoria?.nome || '')}</span>
@@ -307,7 +311,7 @@ function renderizarGrade(lista) {
         <span class="card-conteudo">${esc(p.conteudo)}</span>
         <div class="card-rodape">
           <span class="card-preco">${formatarReais(p.preco_centavos)}</span>
-          ${disponibilidade(p.estoque)}
+          ${disponibilidade(p)}
         </div>
       </div>
     </article>`).join('');
@@ -318,9 +322,16 @@ function abrirProduto(produto, { atualizarUrl = true } = {}) {
   if (!produto) return;
   const modal = $('modal-produto');
   const preco = formatarReais(produto.preco_centavos);
-  const mensagem = produto.estoque > 0
-    ? `Olá! Tenho interesse neste produto do catálogo:\n*${produto.nome}*${produto.conteudo ? ` (${produto.conteudo})` : ''}\nPreço: ${preco}`
-    : `Olá! Pode me avisar quando este produto voltar ao estoque?\n*${produto.nome}*`;
+  const detalhe = `*${produto.nome}*${produto.conteudo ? ` (${produto.conteudo})` : ''}\nPreço: ${preco}`;
+  let mensagem = `Olá! Pode me avisar quando este produto voltar ao estoque?\n*${produto.nome}*`;
+  let botao = 'Avise-me quando chegar';
+  if (produto.pre_venda) {
+    mensagem = `Olá! Quero reservar este produto da pré-venda:\n${detalhe}`;
+    botao = 'Reservar pelo WhatsApp';
+  } else if (produto.estoque > 0) {
+    mensagem = `Olá! Tenho interesse neste produto do catálogo:\n${detalhe}`;
+    botao = 'Pedir pelo WhatsApp';
+  }
   const whats = linkWhatsApp(loja, `${mensagem}\n${location.origin}${location.pathname}?produto=${produto.id}`);
 
   modal.innerHTML = `
@@ -334,17 +345,18 @@ function abrirProduto(produto, { atualizarUrl = true } = {}) {
         <div class="etiquetas">${etiquetaTema(produto.tema)}${seloIdioma(produto.idioma)}</div>
         <h2 id="titulo-produto">${esc(produto.nome)}</h2>
         <div class="preco">${preco}</div>
-        <div>${disponibilidade(produto.estoque)}</div>
+        <div>${disponibilidade(produto)}</div>
+        ${produto.pre_venda ? '<p class="aviso-pre-venda">Produto em pré-venda: reserve agora e receba assim que ele chegar.</p>' : ''}
         ${produto.descricao ? `<p class="descricao">${esc(produto.descricao)}</p>` : ''}
         <dl class="ficha">
           <dt>Idioma</dt><dd class="ficha-idioma">${bandeira(produto.idioma)}${esc(idiomaDe(produto.idioma).nome)}</dd>
           ${produto.conteudo ? `<dt>Conteúdo</dt><dd>${esc(produto.conteudo)}</dd>` : ''}
           ${produto.codigo_barras ? `<dt>Código de barras</dt><dd class="mono">${esc(produto.codigo_barras)}</dd>` : ''}
-          ${produto.estoque > 0 ? `<dt>Estoque</dt><dd>${produto.estoque} unidade(s)</dd>` : ''}
+          ${produto.estoque > 0 && !produto.pre_venda ? `<dt>Estoque</dt><dd>${produto.estoque} unidade(s)</dd>` : ''}
         </dl>
         <div class="produto-acoes">
           ${whats ? `<a class="btn btn-whatsapp btn-bloco" href="${esc(whats)}" target="_blank" rel="noopener">${icone('whatsapp')}
-            ${produto.estoque > 0 ? 'Pedir pelo WhatsApp' : 'Avise-me quando chegar'}</a>` : ''}
+            ${botao}</a>` : ''}
         </div>
       </div>
     </div>`;

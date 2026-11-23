@@ -33,6 +33,7 @@ create table if not exists public.produtos (
   tema_id         bigint references public.temas (id) on delete set null,
   imagem          text not null default '' check (char_length(imagem) <= 1000),
   idioma          text not null default 'pt-BR',
+  pre_venda       boolean not null default false,
   ativo           boolean not null default true,
   criado_em       timestamptz not null default now(),
   atualizado_em   timestamptz not null default now()
@@ -46,6 +47,9 @@ alter table public.produtos add column if not exists idioma text not null defaul
 alter table public.produtos drop constraint if exists produtos_idioma_check;
 alter table public.produtos add constraint produtos_idioma_check
   check (idioma in ('ja', 'en', 'de', 'fr', 'it', 'pt-BR', 'es-ES', 'es-419', 'ko', 'zh-Hant', 'zh-Hans', 'th', 'id'));
+
+-- Pré-venda (atualização de 2026-11-23): o produto aparece como "Pré-venda" e aceita reservas.
+alter table public.produtos add column if not exists pre_venda boolean not null default false;
 
 -- Uma única linha com a identidade visual e os contatos da loja.
 create table if not exists public.loja (

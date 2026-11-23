@@ -116,6 +116,9 @@ dialog.modal-pequeno { width: min(420px, calc(100% - 32px)); }
 .dica-campo.alerta { color: var(--alerta); }
 .interruptor { display: flex; align-items: center; gap: .6rem; cursor: pointer; font-weight: 600; font-size: .9rem; }
 .interruptor input { width: 18px; height: 18px; accent-color: var(--primaria); }
+.interruptor-com-dica { align-items: flex-start; }
+.interruptor-com-dica input { margin-top: .1rem; }
+.interruptor-com-dica small { display: block; font-weight: 400; color: var(--texto-3); font-size: .78rem; }
 .modal-rodape .esquerda { margin-right: auto; }
 
 /* Idioma do produto: opções com bandeira */

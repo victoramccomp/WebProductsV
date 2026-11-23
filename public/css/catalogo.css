@@ -130,6 +130,9 @@
 .estoque { font-size: .75rem; font-weight: 600; color: var(--sucesso); }
 .estoque.baixo { color: var(--alerta); }
 .estoque.zero { color: var(--perigo); }
+.estoque.pre-venda { color: var(--info); }
+.estoque.pre-venda::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: .3rem; border-radius: 50%; background: currentColor; vertical-align: 1px; }
+.aviso-pre-venda { margin: 0; padding: .55rem .75rem; border-radius: var(--raio-sm); background: var(--info-fundo); color: var(--info); font-size: .85rem; font-weight: 600; }
 
 /* ---------- Modal do produto ---------- */
 .modal-produto { width: min(880px, calc(100% - 32px)); }
