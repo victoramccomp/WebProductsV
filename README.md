@@ -84,7 +84,8 @@ arquivo **uma vez** no SQL Editor do Supabase (rodar de novo não estraga nada).
 | Arquivo | O que faz |
 |---|---|
 | `2026-11-16-idioma-dos-produtos.sql` | Campo **Idioma** do produto (produtos antigos ficam como Português BR) |
-| `2026-11-23-pre-venda.sql` | Opção **Pré-venda** no produto (selo no catálogo e botão "Reservar pelo WhatsApp") |
+| `2026-11-23-pre-venda.sql` | Opção **Pré-venda** no produto (etiqueta no catálogo e botão "Reservar pelo WhatsApp") |
+| `2026-11-25-sob-encomenda.sql` | Opção **Sob encomenda** (etiqueta e botão "Encomendar pelo WhatsApp") e Conteúdo com até 160 caracteres |
 
 ---
 

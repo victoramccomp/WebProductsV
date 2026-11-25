@@ -69,7 +69,7 @@ async function iniciar() {
       const idioma = idiomaDe(p.idioma);
       return {
         ...p, categoria, tema, idioma: idioma.codigo,
-        busca: semAcento(`${p.nome} ${p.descricao} ${p.conteudo} ${p.codigo_barras || ''} ${categoria?.nome || ''} ${tema?.nome || ''} ${idioma.nome}${p.pre_venda ? ' pre-venda prevenda' : ''}`),
+        busca: semAcento(`${p.nome} ${p.descricao} ${p.conteudo} ${p.codigo_barras || ''} ${categoria?.nome || ''} ${tema?.nome || ''} ${idioma.nome}${p.pre_venda ? ' pre-venda prevenda' : ''}${p.sob_encomenda ? ' sob encomenda' : ''}`),
       };
     });
   } catch (erro) {
@@ -278,11 +278,21 @@ function renderizarBarra(n) {
   $('chips').innerHTML = chips.join('');
 }
 
-/** Dá para pedir agora: tem estoque ou está em pré-venda. */
-function pedivel(p) { return p.pre_venda || p.estoque > 0; }
+/** Dá para pedir agora: tem estoque, está em pré-venda ou é sob encomenda. */
+function pedivel(p) { return p.pre_venda || p.sob_encomenda || p.estoque > 0; }
 
-function disponibilidade({ estoque, pre_venda: preVenda }) {
-  if (preVenda) return '<span class="estoque pre-venda">Pré-venda</span>';
+/** Etiquetas de situação (pré-venda, sob encomenda). */
+function etiquetasSituacao(p) {
+  return [
+    p.pre_venda ? '<span class="tag-situacao tag-pre-venda">Pré-venda</span>' : '',
+    p.sob_encomenda ? '<span class="tag-situacao tag-encomenda">Sob encomenda</span>' : '',
+  ].join('');
+}
+
+/** Texto de estoque no rodapé do card. Com etiqueta de situação, ela já explica (não repete). */
+function disponibilidade({ estoque, pre_venda: preVenda, sob_encomenda: sobEncomenda }) {
+  if (preVenda) return '';
+  if (estoque <= 0 && sobEncomenda) return '';
   if (estoque <= 0) return '<span class="estoque zero">Esgotado</span>';
   if (estoque <= 3) return `<span class="estoque baixo">Últimas ${estoque} un.</span>`;
   return '<span class="estoque">Disponível</span>';
@@ -307,6 +317,7 @@ function renderizarGrade(lista) {
       <div class="card-imagem">${imagemProduto(p)}${etiquetaTema(p.tema)}${seloIdioma(p.idioma)}</div>
       <div class="card-corpo">
         <span class="card-categoria">${esc(p.categoria?.nome || '')}</span>
+        ${p.pre_venda || p.sob_encomenda ? `<div class="tags-situacao">${etiquetasSituacao(p)}</div>` : ''}
         <h3 class="card-nome"><a href="?produto=${p.id}" data-produto="${p.id}">${esc(p.nome)}</a></h3>
         <span class="card-conteudo">${esc(p.conteudo)}</span>
         <div class="card-rodape">
@@ -331,6 +342,9 @@ function abrirProduto(produto, { atualizarUrl = true } = {}) {
   } else if (produto.estoque > 0) {
     mensagem = `Olá! Tenho interesse neste produto do catálogo:\n${detalhe}`;
     botao = 'Pedir pelo WhatsApp';
+  } else if (produto.sob_encomenda) {
+    mensagem = `Olá! Quero encomendar este produto:\n${detalhe}`;
+    botao = 'Encomendar pelo WhatsApp';
   }
   const whats = linkWhatsApp(loja, `${mensagem}\n${location.origin}${location.pathname}?produto=${produto.id}`);
 
@@ -342,11 +356,13 @@ function abrirProduto(produto, { atualizarUrl = true } = {}) {
     <div class="modal-corpo">
       <div class="produto-imagem">${imagemProduto(produto)}</div>
       <div class="produto-info">
-        <div class="etiquetas">${etiquetaTema(produto.tema)}${seloIdioma(produto.idioma)}</div>
+        <div class="etiquetas">${etiquetasSituacao(produto)}${etiquetaTema(produto.tema)}${seloIdioma(produto.idioma)}</div>
         <h2 id="titulo-produto">${esc(produto.nome)}</h2>
         <div class="preco">${preco}</div>
-        <div>${disponibilidade(produto)}</div>
-        ${produto.pre_venda ? '<p class="aviso-pre-venda">Produto em pré-venda: reserve agora e receba assim que ele chegar.</p>' : ''}
+        ${disponibilidade(produto) ? `<div>${disponibilidade(produto)}</div>` : ''}
+        ${produto.pre_venda ? '<p class="aviso-situacao aviso-pre-venda">Produto em pré-venda: reserve agora e receba assim que ele chegar.</p>' : ''}
+        ${produto.sob_encomenda && !produto.pre_venda && produto.estoque <= 0
+    ? '<p class="aviso-situacao aviso-encomenda">Produto sob encomenda: peça pelo WhatsApp e combinamos o prazo de entrega.</p>' : ''}
         ${produto.descricao ? `<p class="descricao">${esc(produto.descricao)}</p>` : ''}
         <dl class="ficha">
           <dt>Idioma</dt><dd class="ficha-idioma">${bandeira(produto.idioma)}${esc(idiomaDe(produto.idioma).nome)}</dd>

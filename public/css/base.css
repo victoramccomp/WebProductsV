@@ -22,6 +22,7 @@
   --alerta:  #b45309;  --alerta-fundo:  #fef3c7;
   --perigo:  #b91c1c;  --perigo-fundo:  #fee2e2;
   --info:    #1d4ed8;  --info-fundo:    #dbeafe;
+  --encomenda: #6d28d9; --encomenda-fundo: #ede9fe;
   --whatsapp: #15803d;
 
   /* Cor da marca da loja: definida no painel (Aparência) e aplicada por js/loja.js */
@@ -60,6 +61,7 @@
     --alerta:  #fbbf24;  --alerta-fundo:  #78350f55;
     --perigo:  #f87171;  --perigo-fundo:  #7f1d1d55;
     --info:    #93c5fd;  --info-fundo:    #1e3a8a55;
+    --encomenda: #c4b5fd; --encomenda-fundo: #4c1d9555;
     --whatsapp: #22c55e;
     --marca-tinta: var(--marca-tinta-escuro);
     --marca-suave: color-mix(in srgb, var(--marca) 20%, var(--superficie));
@@ -142,6 +144,7 @@ a { color: var(--destaque); }
 .selo-alerta  { background: var(--alerta-fundo);  color: var(--alerta); }
 .selo-perigo  { background: var(--perigo-fundo);  color: var(--perigo); }
 .selo-info    { background: var(--info-fundo);    color: var(--info); }
+.selo-encomenda { background: var(--encomenda-fundo); color: var(--encomenda); }
 
 /* ---------- Painel lateral (drawer) e modal ---------- */
 .veu {

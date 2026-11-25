@@ -25,7 +25,7 @@ create table if not exists public.produtos (
   id              bigint generated always as identity primary key,
   nome            text not null check (char_length(btrim(nome)) between 2 and 160),
   descricao       text not null default '' check (char_length(descricao) <= 4000),
-  conteudo        text not null default '' check (char_length(conteudo) <= 80),
+  conteudo        text not null default '' check (char_length(conteudo) <= 160),
   codigo_barras   text unique check (codigo_barras ~ '^[0-9]{8,14}$'),
   preco_centavos  integer not null check (preco_centavos >= 0),
   estoque         integer not null default 0 check (estoque >= 0),
@@ -34,6 +34,7 @@ create table if not exists public.produtos (
   imagem          text not null default '' check (char_length(imagem) <= 1000),
   idioma          text not null default 'pt-BR',
   pre_venda       boolean not null default false,
+  sob_encomenda   boolean not null default false,
   ativo           boolean not null default true,
   criado_em       timestamptz not null default now(),
   atualizado_em   timestamptz not null default now()
@@ -50,6 +51,11 @@ alter table public.produtos add constraint produtos_idioma_check
 
 -- Pré-venda (atualização de 2026-11-23): o produto aparece como "Pré-venda" e aceita reservas.
 alter table public.produtos add column if not exists pre_venda boolean not null default false;
+
+-- Sob encomenda + conteúdo até 160 caracteres (atualização de 2026-11-25).
+alter table public.produtos add column if not exists sob_encomenda boolean not null default false;
+alter table public.produtos drop constraint if exists produtos_conteudo_check;
+alter table public.produtos add constraint produtos_conteudo_check check (char_length(conteudo) <= 160);
 
 -- Uma única linha com a identidade visual e os contatos da loja.
 create table if not exists public.loja (

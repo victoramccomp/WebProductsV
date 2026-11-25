@@ -104,6 +104,7 @@
   background: #b91c1c; color: #fff; font-size: 6.5pt; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
 }
 .pdf-selo-pre-venda { background: #1d4ed8; }
+.pdf-selo-encomenda { background: #6d28d9; }
 .pdf-card-info { flex: 1; display: flex; flex-direction: column; gap: 1mm; padding: 2.5mm 3mm 3mm; border-top: .3mm solid #f1f5f9; }
 .pdf-etiquetas { display: flex; flex-wrap: wrap; align-items: center; gap: 1mm 2mm; }
 .pdf-tema { display: inline-block; padding: .4mm 2mm; border-radius: 99px; font-size: 7pt; font-weight: 700; line-height: 1.4; }

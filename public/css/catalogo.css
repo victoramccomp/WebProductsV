@@ -130,9 +130,19 @@
 .estoque { font-size: .75rem; font-weight: 600; color: var(--sucesso); }
 .estoque.baixo { color: var(--alerta); }
 .estoque.zero { color: var(--perigo); }
-.estoque.pre-venda { color: var(--info); }
-.estoque.pre-venda::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: .3rem; border-radius: 50%; background: currentColor; vertical-align: 1px; }
-.aviso-pre-venda { margin: 0; padding: .55rem .75rem; border-radius: var(--raio-sm); background: var(--info-fundo); color: var(--info); font-size: .85rem; font-weight: 600; }
+/* Etiquetas de situação: pré-venda e sob encomenda */
+.tags-situacao { display: flex; flex-wrap: wrap; gap: .3rem; margin: .25rem 0 .1rem; }
+.tag-situacao {
+  display: inline-flex; align-items: center; gap: .3rem; padding: .12rem .5rem; border-radius: 999px;
+  font-size: .7rem; font-weight: 700; line-height: 1.5; white-space: nowrap;
+}
+.tag-situacao::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.tag-pre-venda { background: var(--info-fundo); color: var(--info); }
+.tag-encomenda { background: var(--encomenda-fundo); color: var(--encomenda); }
+.produto-info .tag-situacao { font-size: .72rem; }
+.aviso-situacao { margin: 0; padding: .55rem .75rem; border-radius: var(--raio-sm); font-size: .85rem; font-weight: 600; }
+.aviso-pre-venda { background: var(--info-fundo); color: var(--info); }
+.aviso-encomenda { background: var(--encomenda-fundo); color: var(--encomenda); }
 
 /* ---------- Modal do produto ---------- */
 .modal-produto { width: min(880px, calc(100% - 32px)); }

@@ -86,7 +86,7 @@ export async function vistaProdutos(vista) {
 }
 
 function renderizarIndicadores(vista) {
-  const semEstoque = produtos.filter((p) => p.estoque === 0 && !p.pre_venda).length;
+  const semEstoque = produtos.filter((p) => p.estoque === 0 && !p.pre_venda && !p.sob_encomenda).length;
   const ocultos = produtos.filter((p) => !p.ativo).length;
   vista.querySelector('#indicadores').innerHTML = `
     <div class="indicador"><span>Produtos</span><strong>${produtos.length}</strong></div>
@@ -145,12 +145,12 @@ function renderizarTabela(vista) {
         ${lista.map((p) => `
           <tr class="clicavel${p.ativo ? '' : ' inativo'}" data-id="${p.id}">
             <td><div class="miniatura">${imagemProduto(p)}</div></td>
-            <td><strong>${esc(p.nome)}</strong>${p.ativo ? '' : ' <span class="selo">Oculto</span>'}${p.pre_venda ? ' <span class="selo selo-info">Pré-venda</span>' : ''}
+            <td><strong>${esc(p.nome)}</strong>${p.ativo ? '' : ' <span class="selo">Oculto</span>'}${p.pre_venda ? ' <span class="selo selo-info">Pré-venda</span>' : ''}${p.sob_encomenda ? ' <span class="selo selo-encomenda">Sob encomenda</span>' : ''}
               <span class="sub linha-idioma">${seloIdioma(p.idioma)}${esc(p.conteudo)}</span></td>
             <td class="mono">${esc(p.codigo_barras || '—')}</td>
             <td>${esc(p.categoria)}<span class="sub">${p.tema ? `<span class="ponto-tema" style="--cor:${esc(p.tema.cor)}"></span>${esc(p.tema.nome)}` : 'Sem tema'}</span></td>
             <td class="num">${formatarReais(p.preco_centavos)}</td>
-            <td class="num ${p.pre_venda ? '' : p.estoque === 0 ? 'estoque-zero' : p.estoque <= 3 ? 'estoque-baixo' : ''}">${p.estoque}</td>
+            <td class="num ${p.pre_venda || p.sob_encomenda ? '' : p.estoque === 0 ? 'estoque-zero' : p.estoque <= 3 ? 'estoque-baixo' : ''}">${p.estoque}</td>
             <td class="acoes">
               <button class="btn btn-fantasma btn-icone" type="button" aria-label="Editar ${esc(p.nome)}">${icone('editar')}</button>
               <button class="btn btn-fantasma btn-icone btn-perigo" type="button" data-excluir aria-label="Excluir ${esc(p.nome)}">${icone('lixo')}</button>
@@ -184,7 +184,7 @@ function abrirFormulario(produto, depois) {
   const p = produto || {
     nome: '', descricao: '', conteudo: '', codigo_barras: '', preco_centavos: 0, estoque: 0,
     categoria_id: categorias.length === 1 ? categorias[0].id : '', tema_id: '', imagem: '', ativo: true,
-    idioma: IDIOMA_PADRAO, pre_venda: false,
+    idioma: IDIOMA_PADRAO, pre_venda: false, sob_encomenda: false,
   };
   // imagem: '' | URL já salva | { blob, previa } (arquivo novo, enviado só ao salvar)
   let imagem = p.imagem || '';
@@ -215,7 +215,7 @@ function abrirFormulario(produto, depois) {
             <textarea class="textarea" name="descricao" maxlength="4000" rows="3">${esc(p.descricao)}</textarea>
           </label>
           <label class="campo"><span>Conteúdo</span>
-            <input class="input" name="conteudo" maxlength="80" list="sugestoes-conteudo" placeholder="Ex.: Unidade, 500 ml, Caixa com 10" value="${esc(p.conteudo)}">
+            <input class="input" name="conteudo" maxlength="160" list="sugestoes-conteudo" placeholder="Ex.: Unidade, 500 ml, Caixa com 10" value="${esc(p.conteudo)}">
             <datalist id="sugestoes-conteudo">${SUGESTOES_CONTEUDO.map((s) => `<option value="${s}">`).join('')}</datalist>
           </label>
           <label class="campo"><span>Código de barras (EAN/GTIN)</span>
@@ -267,7 +267,11 @@ function abrirFormulario(produto, depois) {
           </label>
           <label class="interruptor largo interruptor-com-dica">
             <input type="checkbox" name="pre_venda" ${p.pre_venda ? 'checked' : ''}>
-            <span>Pré-venda<small>O catálogo mostra “Pré-venda” (mesmo sem estoque) e o botão vira “Reservar pelo WhatsApp”.</small></span>
+            <span>Pré-venda<small>O catálogo mostra a etiqueta “Pré-venda” (mesmo sem estoque) e o botão vira “Reservar pelo WhatsApp”.</small></span>
+          </label>
+          <label class="interruptor largo interruptor-com-dica">
+            <input type="checkbox" name="sob_encomenda" ${p.sob_encomenda ? 'checked' : ''}>
+            <span>Sob encomenda<small>O catálogo mostra a etiqueta “Sob encomenda”; sem estoque, o botão vira “Encomendar pelo WhatsApp”.</small></span>
           </label>
         </div>
       </form>`,
@@ -418,7 +422,7 @@ function abrirFormulario(produto, depois) {
         codigo_barras: form.codigo_barras.value || null, preco_centavos: preco, estoque,
         categoria_id: Number(form.categoria_id.value), tema_id: Number(form.tema_id.value) || null,
         imagem: enviada || url, ativo: form.ativo.checked, idioma: form.idioma.value || IDIOMA_PADRAO,
-        pre_venda: form.pre_venda.checked,
+        pre_venda: form.pre_venda.checked, sob_encomenda: form.sob_encomenda.checked,
       };
       await rest(editando ? `produtos?id=eq.${produto.id}` : 'produtos', {
         metodo: editando ? 'PATCH' : 'POST', corpo: dados, admin: true, prefer: 'return=minimal',

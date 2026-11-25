@@ -29,7 +29,7 @@ admins (user_id → auth.users)
 |---|---|---|
 | `categorias` | `id`, `nome` (único), `ordem` | Tipo do produto (Blister, Box, ETB…). `ordem` = ordem na barra lateral. |
 | `temas` | `id`, `nome` (único), `cor` (`#rrggbb`), `ordem` | Assunto do produto (Pokémon, Digimon…). A cor aparece no catálogo. |
-| `produtos` | `id`, `nome`, `descricao`, `conteudo`, `codigo_barras` (único, 8–14 dígitos), `preco_centavos`, `estoque`, `categoria_id` (obrigatório), `tema_id` (opcional), `imagem` (URL), `idioma`, `pre_venda`, `ativo`, `criado_em`, `atualizado_em` | Preço em **centavos** (inteiro). `ativo = false` esconde do catálogo. `idioma` = código (`ja`, `en`, `pt-BR`, `es-419`, `zh-Hant`…; padrão `pt-BR`). `pre_venda = true` mostra "Pré-venda" (mesmo sem estoque) e o botão "Reservar pelo WhatsApp". |
+| `produtos` | `id`, `nome`, `descricao`, `conteudo`, `codigo_barras` (único, 8–14 dígitos), `preco_centavos`, `estoque`, `categoria_id` (obrigatório), `tema_id` (opcional), `imagem` (URL), `idioma`, `pre_venda`, `sob_encomenda`, `ativo`, `criado_em`, `atualizado_em` | Preço em **centavos** (inteiro). `ativo = false` esconde do catálogo. `idioma` = código (`ja`, `en`, `pt-BR`, `es-419`, `zh-Hant`…; padrão `pt-BR`). `pre_venda` e `sob_encomenda` viram etiquetas no catálogo (o produto não fica "Esgotado") e mudam o botão do WhatsApp ("Reservar…" / "Encomendar…"). |
 | `loja` | `nome`, `slogan`, `logo_url`, `cor_primaria`, `instagram`, `whatsapp` (só dígitos, com DDI), `facebook`, `tiktok` | Uma única linha (`id = 1`). |
 | `admins` | `user_id` | Quem pode gravar. Conta no Auth sem linha aqui não grava nada. |
 
